@@ -1,9 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, Music, Loader, Trash2, Play } from 'lucide-react';
 import { db } from '../utils/db';
-import { MusicMetadata } from '../types/music';
+import { MusicFormat, MusicMetadata } from '../types/music';
 import { bpmDetectionService } from '../services/BPMDetectionService';
 import { useAppStore } from '../stores/useAppStore';
+
+const getMusicFormat = (file: File): MusicFormat => {
+  const type = file.type.toLowerCase();
+  if (type.includes('mpeg') || type.includes('mp3')) return MusicFormat.MP3;
+  if (type.includes('wav')) return MusicFormat.WAV;
+  if (type.includes('ogg')) return MusicFormat.OGG;
+  if (type.includes('aac') || type.includes('m4a')) return MusicFormat.AAC;
+  if (type.includes('flac')) return MusicFormat.FLAC;
+
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'mp3':
+      return MusicFormat.MP3;
+    case 'wav':
+      return MusicFormat.WAV;
+    case 'ogg':
+      return MusicFormat.OGG;
+    case 'aac':
+    case 'm4a':
+      return MusicFormat.AAC;
+    case 'flac':
+      return MusicFormat.FLAC;
+    default:
+      return MusicFormat.MP3;
+  }
+};
 
 export function MusicLibraryView() {
   const [musicLibrary, setMusicLibrary] = useState<MusicMetadata[]>([]);
@@ -32,6 +58,11 @@ export function MusicLibraryView() {
 
     for (const file of Array.from(files)) {
       try {
+        if (!bpmDetectionService.validateAudioFile(file)) {
+          setUploadProgress(`Unsupported format: ${file.name}`);
+          continue;
+        }
+
         setUploadProgress(`Processing: ${file.name}`);
 
         // Load audio file
@@ -40,7 +71,8 @@ export function MusicLibraryView() {
         setUploadProgress(`Analyzing BPM: ${file.name}`);
 
         // Detect BPM
-        const bpm = await bpmDetectionService.detectBPM(audioBuffer);
+        const bpmResult = await bpmDetectionService.detectBPMFromBuffer(audioBuffer);
+        const bpm = bpmResult.success ? bpmResult.bpm : null;
 
         setUploadProgress(`Saving: ${file.name}`);
 
@@ -52,8 +84,10 @@ export function MusicLibraryView() {
           bpm,
           duration: audioBuffer.duration,
           fileSize: file.size,
-          uploadDate: new Date(),
+          format: getMusicFormat(file),
+          uploadDate: Date.now(),
           audioBlob: file,
+          playCount: 0,
         };
 
         // Save to IndexedDB

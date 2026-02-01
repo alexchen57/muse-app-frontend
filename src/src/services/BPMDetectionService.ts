@@ -178,7 +178,7 @@ export class BPMDetectionService implements IBPMDetectionService {
   }
 
   /**
-   * Detect BPM from AudioBuffer using onset detection and autocorrelation
+   * Detect BPM from AudioBuffer using peak detection and interval analysis
    */
   async detectBPMFromBuffer(audioBuffer: AudioBuffer): Promise<BPMDetectionResult> {
     const startTime = performance.now();
@@ -187,58 +187,60 @@ export class BPMDetectionService implements IBPMDetectionService {
     try {
       // Get mono channel data
       const channelData = this.getMixedChannelData(audioBuffer);
+      const sampleRate = audioBuffer.sampleRate;
       
       if (this.isCancelled) {
         return this.createCancelledResult(startTime);
       }
 
       // Limit analysis to first N seconds for performance
-      const sampleRate = audioBuffer.sampleRate;
       const maxSamples = Math.min(
         channelData.length,
         Math.floor(this.config.sampleLength * sampleRate)
       );
       const analysisData = channelData.slice(0, maxSamples);
 
-      // Step 1: Apply low-pass filter to isolate bass frequencies
-      const filteredData = this.applyLowPassFilter(analysisData, sampleRate);
-      
+      // Use multiple detection methods and pick the best result
+      const results: { bpm: number; confidence: number }[] = [];
+
+      // Method 1: Peak-based detection
+      const peakResult = this.detectBPMByPeaks(analysisData, sampleRate);
+      if (peakResult.bpm > 0) {
+        results.push(peakResult);
+      }
+
+      // Method 2: Autocorrelation-based detection
+      const autoResult = this.detectBPMByAutocorrelationSimple(analysisData, sampleRate);
+      if (autoResult.bpm > 0) {
+        results.push(autoResult);
+      }
+
       if (this.isCancelled) {
         return this.createCancelledResult(startTime);
       }
 
-      // Step 2: Calculate energy envelope
-      const energyEnvelope = this.calculateEnergyEnvelope(filteredData, sampleRate);
-      
-      if (this.isCancelled) {
-        return this.createCancelledResult(startTime);
+      // Pick the result with highest confidence
+      let bestResult = { bpm: 0, confidence: 0 };
+      for (const result of results) {
+        if (result.confidence > bestResult.confidence) {
+          bestResult = result;
+        }
       }
 
-      // Step 3: Detect onsets using spectral flux
-      const onsets = this.detectOnsets(energyEnvelope);
-      
-      if (this.isCancelled) {
-        return this.createCancelledResult(startTime);
+      // Fallback if no valid result
+      if (bestResult.bpm === 0) {
+        // Try energy-based method as last resort
+        const energyResult = this.detectBPMByEnergy(analysisData, sampleRate);
+        bestResult = energyResult;
       }
-
-      // Step 4: Calculate inter-onset intervals
-      const intervals = this.calculateIntervals(onsets);
-      
-      if (intervals.length < 4) {
-        // Not enough beats detected, try autocorrelation method
-        return this.detectBPMByAutocorrelation(energyEnvelope, sampleRate, startTime);
-      }
-
-      // Step 5: Find most common interval (tempo)
-      const { bpm, confidence } = this.findDominantTempo(intervals, sampleRate, energyEnvelope.length);
 
       const processingTime = performance.now() - startTime;
 
       return {
-        bpm: Math.round(bpm),
-        confidence,
+        bpm: Math.round(bestResult.bpm),
+        confidence: bestResult.confidence,
         processingTime,
-        success: true
+        success: bestResult.bpm > 0
       };
     } catch (error) {
       return {
@@ -249,6 +251,209 @@ export class BPMDetectionService implements IBPMDetectionService {
         error: error instanceof Error ? error.message : 'Unknown error during BPM detection'
       };
     }
+  }
+
+  /**
+   * Detect BPM using peak detection in energy envelope
+   */
+  private detectBPMByPeaks(data: Float32Array, sampleRate: number): { bpm: number; confidence: number } {
+    // Calculate RMS energy in windows of ~50ms
+    const windowSize = Math.floor(sampleRate * 0.05);
+    const hopSize = Math.floor(windowSize / 4);
+    const numFrames = Math.floor((data.length - windowSize) / hopSize);
+    
+    const energy = new Float32Array(numFrames);
+    for (let frame = 0; frame < numFrames; frame++) {
+      const start = frame * hopSize;
+      let sum = 0;
+      for (let i = 0; i < windowSize; i++) {
+        const sample = data[start + i];
+        sum += sample * sample;
+      }
+      energy[frame] = Math.sqrt(sum / windowSize);
+    }
+
+    // Find peaks in energy
+    const peaks: number[] = [];
+    const threshold = this.calculateThreshold(energy);
+    
+    for (let i = 2; i < energy.length - 2; i++) {
+      if (energy[i] > threshold &&
+          energy[i] > energy[i - 1] &&
+          energy[i] > energy[i - 2] &&
+          energy[i] >= energy[i + 1] &&
+          energy[i] >= energy[i + 2]) {
+        peaks.push(i);
+      }
+    }
+
+    if (peaks.length < 4) {
+      return { bpm: 0, confidence: 0 };
+    }
+
+    // Calculate intervals between peaks
+    const intervals: number[] = [];
+    for (let i = 1; i < peaks.length; i++) {
+      intervals.push(peaks[i] - peaks[i - 1]);
+    }
+
+    // Convert intervals to BPM and find the most common
+    const frameRate = sampleRate / hopSize;
+    const bpmCandidates: number[] = [];
+    
+    for (const interval of intervals) {
+      const bpm = (frameRate / interval) * 60;
+      if (bpm >= this.config.bpmRange.min && bpm <= this.config.bpmRange.max) {
+        bpmCandidates.push(bpm);
+      }
+    }
+
+    if (bpmCandidates.length === 0) {
+      return { bpm: 0, confidence: 0 };
+    }
+
+    // Use median BPM for robustness
+    bpmCandidates.sort((a, b) => a - b);
+    const medianBPM = bpmCandidates[Math.floor(bpmCandidates.length / 2)];
+
+    // Calculate confidence based on consistency
+    const tolerance = 5;
+    const consistentCount = bpmCandidates.filter(b => Math.abs(b - medianBPM) <= tolerance).length;
+    const confidence = Math.min(0.9, consistentCount / bpmCandidates.length);
+
+    return { bpm: medianBPM, confidence };
+  }
+
+  /**
+   * Calculate adaptive threshold for peak detection
+   */
+  private calculateThreshold(energy: Float32Array): number {
+    // Sort energy values and take the 70th percentile
+    const sorted = Array.from(energy).sort((a, b) => a - b);
+    const percentileIndex = Math.floor(sorted.length * 0.7);
+    return sorted[percentileIndex];
+  }
+
+  /**
+   * Simplified autocorrelation-based BPM detection
+   */
+  private detectBPMByAutocorrelationSimple(data: Float32Array, sampleRate: number): { bpm: number; confidence: number } {
+    // Downsample for efficiency
+    const downsampleFactor = Math.max(1, Math.floor(sampleRate / 4000));
+    const downsampled = new Float32Array(Math.floor(data.length / downsampleFactor));
+    
+    for (let i = 0; i < downsampled.length; i++) {
+      let sum = 0;
+      for (let j = 0; j < downsampleFactor; j++) {
+        const idx = i * downsampleFactor + j;
+        sum += Math.abs(data[idx]);
+      }
+      downsampled[i] = sum / downsampleFactor;
+    }
+
+    const effectiveSampleRate = sampleRate / downsampleFactor;
+    
+    // BPM range to lag range
+    const minLag = Math.floor(effectiveSampleRate * 60 / this.config.bpmRange.max);
+    const maxLag = Math.floor(effectiveSampleRate * 60 / this.config.bpmRange.min);
+
+    // Normalize
+    let mean = 0;
+    for (let i = 0; i < downsampled.length; i++) {
+      mean += downsampled[i];
+    }
+    mean /= downsampled.length;
+
+    for (let i = 0; i < downsampled.length; i++) {
+      downsampled[i] -= mean;
+    }
+
+    // Find best lag
+    let bestLag = minLag;
+    let maxCorr = -Infinity;
+
+    for (let lag = minLag; lag <= maxLag && lag < downsampled.length / 2; lag++) {
+      let corr = 0;
+      const limit = Math.min(downsampled.length - lag, 4000);
+      
+      for (let i = 0; i < limit; i++) {
+        corr += downsampled[i] * downsampled[i + lag];
+      }
+      
+      if (corr > maxCorr) {
+        maxCorr = corr;
+        bestLag = lag;
+      }
+    }
+
+    // Convert lag to BPM
+    let bpm = (effectiveSampleRate * 60) / bestLag;
+
+    // Ensure BPM is in valid range
+    while (bpm < this.config.bpmRange.min && bpm > 0) bpm *= 2;
+    while (bpm > this.config.bpmRange.max) bpm /= 2;
+
+    // Calculate confidence
+    // Compare max correlation to average
+    let avgCorr = 0;
+    let count = 0;
+    for (let lag = minLag; lag <= maxLag && lag < downsampled.length / 2; lag += 10) {
+      let corr = 0;
+      const limit = Math.min(downsampled.length - lag, 4000);
+      for (let i = 0; i < limit; i++) {
+        corr += downsampled[i] * downsampled[i + lag];
+      }
+      avgCorr += corr;
+      count++;
+    }
+    avgCorr /= count;
+
+    const confidence = maxCorr > 0 ? Math.min(0.85, (maxCorr / (avgCorr + 1)) * 0.3 + 0.3) : 0;
+
+    return { bpm, confidence };
+  }
+
+  /**
+   * Energy-based BPM detection (fallback method)
+   */
+  private detectBPMByEnergy(data: Float32Array, sampleRate: number): { bpm: number; confidence: number } {
+    // Simple approach: count zero crossings after low-pass filtering
+    const windowSize = Math.floor(sampleRate * 0.1);
+    const numWindows = Math.floor(data.length / windowSize);
+    
+    const energyPerWindow: number[] = [];
+    for (let w = 0; w < numWindows; w++) {
+      let energy = 0;
+      for (let i = 0; i < windowSize; i++) {
+        energy += Math.abs(data[w * windowSize + i]);
+      }
+      energyPerWindow.push(energy / windowSize);
+    }
+
+    // Count significant energy peaks
+    let peakCount = 0;
+    const threshold = energyPerWindow.reduce((a, b) => a + b, 0) / energyPerWindow.length * 1.2;
+    
+    for (let i = 1; i < energyPerWindow.length - 1; i++) {
+      if (energyPerWindow[i] > threshold &&
+          energyPerWindow[i] > energyPerWindow[i - 1] &&
+          energyPerWindow[i] > energyPerWindow[i + 1]) {
+        peakCount++;
+      }
+    }
+
+    // Convert to BPM
+    const durationSeconds = data.length / sampleRate;
+    let bpm = (peakCount / durationSeconds) * 60;
+
+    // Adjust to valid range
+    while (bpm < this.config.bpmRange.min && bpm > 0) bpm *= 2;
+    while (bpm > this.config.bpmRange.max) bpm /= 2;
+
+    // Low confidence for this fallback method
+    const confidence = 0.4;
+
+    return { bpm: bpm || 100, confidence };
   }
 
   /**

@@ -1,8 +1,23 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Home, History, Music, Settings, Activity, Heart, Brain, Play, Pause, Volume2, TrendingUp, Calendar, Clock } from 'lucide-react';
+import { MusicLibraryView } from './src/views/MusicLibraryView';
+import { MusicPlayer } from './src/components/MusicPlayer';
+import { db } from './src/utils/db';
+import { MusicMetadata } from './src/types/music';
+import { UserStateType } from './src/types/state';
+import { musicRecommendationService } from './src/services/MusicRecommendationService';
+import { useAppStore } from './src/stores/useAppStore';
 
 // Simplified state types
 type WorkState = 'calm' | 'anxious' | 'focused' | 'distracted';
+
+// Map WorkState to UserStateType
+const stateMapping: Record<WorkState, UserStateType> = {
+  calm: UserStateType.CALM,
+  anxious: UserStateType.STRESSED,
+  focused: UserStateType.PRODUCTIVE,
+  distracted: UserStateType.DISTRACTED
+};
 
 // History record type
 interface HistoryRecord {
@@ -10,6 +25,45 @@ interface HistoryRecord {
   heartRate: number;
   mwl: number;
   state: WorkState;
+}
+
+class MusicErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; errorMessage: string }
+> {
+  state = { hasError: false, errorMessage: '' };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, errorMessage: error.message };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('Music view crashed:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          background: 'rgba(30, 41, 59, 0.5)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '16px',
+          padding: '24px',
+          border: '1px solid rgba(71, 85, 105, 0.5)',
+          color: '#fca5a5'
+        }}>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>
+            Music Library failed to load
+          </div>
+          <div style={{ fontSize: '13px', color: '#94a3b8' }}>
+            {this.state.errorMessage || 'Unknown error'}
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
 }
 
 function App() {
@@ -20,6 +74,17 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(70);
   const [history, setHistory] = useState<HistoryRecord[]>([]);
+  const [musicLibrary, setMusicLibrary] = useState<MusicMetadata[]>([]);
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
+  const previousStateRef = useRef<WorkState>(currentState);
+  const playHistoryRef = useRef<string[]>([]);
+
+  // Zustand store for music player
+  const { 
+    setCurrentMusic, 
+    setIsPlaying: setStoreIsPlaying,
+    currentMusic 
+  } = useAppStore();
 
   // State configuration
   const stateConfig = {
@@ -48,6 +113,23 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Load music library on mount
+  useEffect(() => {
+    const loadMusicLibrary = async () => {
+      try {
+        const music = await db.music.toArray();
+        setMusicLibrary(music);
+      } catch (error) {
+        console.error('Failed to load music library:', error);
+      }
+    };
+    loadMusicLibrary();
+
+    // Refresh music library periodically (in case user uploads new music)
+    const refreshInterval = setInterval(loadMusicLibrary, 10000);
+    return () => clearInterval(refreshInterval);
+  }, []);
+
   // Determine state based on heart rate and MWL
   useEffect(() => {
     if (heartRate > 85 && mwl > 70) {
@@ -60,6 +142,54 @@ function App() {
       setCurrentState('distracted');
     }
   }, [heartRate, mwl]);
+
+  // Recommend and play music when state changes
+  useEffect(() => {
+    if (!autoPlayEnabled || musicLibrary.length === 0) return;
+    
+    // Only trigger when state actually changes
+    if (previousStateRef.current === currentState) return;
+    previousStateRef.current = currentState;
+
+    // Map to UserStateType
+    const userStateType = stateMapping[currentState];
+
+    // Default user preferences (can be customized later)
+    const defaultPreferences = {
+      id: 'default',
+      userId: 'user',
+      genrePreferences: [],
+      stateMusicMappings: [],
+      volume: volume,
+      autoPlay: true,
+      fadeEnabled: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    // Get recommendation
+    const recommendedMusic = musicRecommendationService.recommendMusic(
+      userStateType,
+      heartRate,
+      musicLibrary,
+      defaultPreferences,
+      playHistoryRef.current
+    );
+
+    if (recommendedMusic) {
+      // Add to play history (keep last 10)
+      playHistoryRef.current = [
+        recommendedMusic.id,
+        ...playHistoryRef.current.slice(0, 9)
+      ];
+
+      // Set music and start playing
+      setCurrentMusic(recommendedMusic);
+      setStoreIsPlaying(true);
+      
+      console.log(`State changed to ${currentState}, playing: ${recommendedMusic.title} (${recommendedMusic.bpm} BPM)`);
+    }
+  }, [currentState, musicLibrary, autoPlayEnabled, heartRate, volume, setCurrentMusic, setStoreIsPlaying]);
 
   // Record history data
   useEffect(() => {
@@ -395,95 +525,103 @@ function App() {
                   </div>
                 </div>
 
-                {/* Music Player */}
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  border: '1px solid rgba(71, 85, 105, 0.5)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <div style={{
-                      width: '88px',
-                      height: '88px',
-                      background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '40px',
-                      flexShrink: 0,
-                      boxShadow: '0 8px 24px rgba(139, 92, 246, 0.3)'
-                    }}>
-                      🎵
+                {/* Music Player with Auto-Recommendation */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Auto-play toggle and recommendation info */}
+                  <div style={{
+                    background: 'rgba(30, 41, 59, 0.5)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    border: '1px solid rgba(71, 85, 105, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+                        🎯 State-Based Music Recommendation
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                        {musicLibrary.length === 0 
+                          ? 'No music uploaded. Go to Music Library to upload songs.'
+                          : `${musicLibrary.length} songs available • Recommending based on "${currentStateInfo.label}" state`
+                        }
+                      </div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: '500' }}>
-                        Now Playing
-                      </div>
-                      <div style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '4px' }}>
-                        {currentState === 'calm' ? 'Relaxing Meditation Music' : 
-                         currentState === 'anxious' ? 'Stress Relief Music' :
-                         currentState === 'focused' ? 'Focus Work Music' : 'Energizing Music'}
-                      </div>
-                      <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '16px' }}>
-                        Recommended BPM: {currentState === 'calm' ? '60-70' : 
-                                  currentState === 'anxious' ? '50-60' :
-                                  currentState === 'focused' ? '70-80' : '80-90'}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <button
-                          onClick={() => setIsPlaying(!isPlaying)}
-                          style={{
-                            width: '48px',
-                            height: '48px',
-                            background: 'white',
-                            color: '#0f172a',
-                            border: 'none',
-                            borderRadius: '50%',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                            transition: 'transform 0.2s'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        >
-                          {isPlaying ? <Pause style={{ width: '20px', height: '20px' }} /> : <Play style={{ width: '20px', height: '20px', marginLeft: '2px' }} />}
-                        </button>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <Volume2 style={{ width: '18px', height: '18px', color: '#94a3b8' }} />
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={volume}
-                            onChange={(e) => setVolume(Number(e.target.value))}
-                            style={{
-                              flex: 1,
-                              height: '4px',
-                              background: '#475569',
-                              borderRadius: '2px',
-                              outline: 'none',
-                              cursor: 'pointer'
-                            }}
-                          />
-                          <span style={{ fontSize: '13px', color: '#94a3b8', width: '36px', textAlign: 'right', fontWeight: '500' }}>
-                            {volume}
-                          </span>
-                        </div>
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '13px', color: '#94a3b8' }}>Auto-play</span>
+                      <button
+                        onClick={() => setAutoPlayEnabled(!autoPlayEnabled)}
+                        style={{
+                          width: '44px',
+                          height: '24px',
+                          borderRadius: '12px',
+                          border: 'none',
+                          background: autoPlayEnabled ? '#3b82f6' : '#475569',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <div style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          background: 'white',
+                          position: 'absolute',
+                          top: '3px',
+                          left: autoPlayEnabled ? '23px' : '3px',
+                          transition: 'left 0.2s'
+                        }} />
+                      </button>
                     </div>
                   </div>
+
+                  {/* Music Player Component */}
+                  <MusicErrorBoundary>
+                    <MusicPlayer />
+                  </MusicErrorBoundary>
+
+                  {/* Recommendation Strategy Info */}
+                  {currentMusic && (
+                    <div style={{
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      fontSize: '13px',
+                      color: '#93c5fd',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <span>💡</span>
+                      <span>
+                        Playing "{currentMusic.title}" ({currentMusic.bpm || '?'} BPM) — 
+                        {currentState === 'calm' && ' maintaining your calm state'}
+                        {currentState === 'anxious' && ' helping reduce stress with slower tempo'}
+                        {currentState === 'focused' && ' supporting your productive flow'}
+                        {currentState === 'distracted' && ' boosting alertness with energizing beats'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Other Views */}
-            {currentView !== 'home' && currentView !== 'history' && (
+            {/* Music View */}
+            {currentView === 'music' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <MusicErrorBoundary>
+                  <MusicPlayer />
+                  <MusicLibraryView />
+                </MusicErrorBoundary>
+              </div>
+            )}
+
+            {/* Settings View */}
+            {currentView === 'settings' && (
               <div style={{
                 background: 'rgba(30, 41, 59, 0.5)',
                 backdropFilter: 'blur(10px)',
@@ -493,38 +631,14 @@ function App() {
                 textAlign: 'center'
               }}>
                 <div style={{ fontSize: '72px', marginBottom: '24px' }}>
-                  {currentView === 'music' && '🎵'}
-                  {currentView === 'settings' && '⚙️'}
+                  {'⚙️'}
                 </div>
                 <h2 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '12px' }}>
-                  {currentView === 'music' && 'Music Library'}
-                  {currentView === 'settings' && 'System Settings'}
+                  {'System Settings'}
                 </h2>
                 <p style={{ fontSize: '16px', color: '#94a3b8', marginBottom: '32px' }}>
-                  {currentView === 'music' ? 'Upload your music files, the system will automatically detect BPM and classify' : 'Feature under development...'}
+                  {'Feature under development...'}
                 </p>
-                {currentView === 'music' && (
-                  <div style={{
-                    border: '2px dashed #475569',
-                    borderRadius: '12px',
-                    padding: '48px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s',
-                    background: 'rgba(15, 23, 42, 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#3b82f6';
-                    e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#475569';
-                    e.currentTarget.style.background = 'rgba(15, 23, 42, 0.3)';
-                  }}>
-                    <div style={{ fontSize: '56px', marginBottom: '16px' }}>📁</div>
-                    <p style={{ fontSize: '16px', color: '#cbd5e1', marginBottom: '8px' }}>Click or drag files to upload</p>
-                    <p style={{ fontSize: '13px', color: '#64748b' }}>Supports MP3, WAV, OGG formats</p>
-                  </div>
-                )}
               </div>
             )}
 

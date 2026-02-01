@@ -2,6 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Primary Colors */
+  --coral: #E07A5F;
+  --coral-light: #F4A261;
+  --soft-blue: #A8DADC;
+  --soft-blue-dark: #7FBFC1;
+  
+  /* Background Colors */
+  --cream: #FAF7F5;
+  --card: #FFFFFF;
+  --beige: #E8DDD4;
+  --beige-light: #F5F0EB;
+  
+  /* Text Colors */
+  --text-dark: #3D3D3D;
+  --text-muted: #8A8A8A;
+  
+  /* State Colors */
+  --state-stressed: #E07A5F;
+  --state-calm: #81B29A;
+  --state-productive: #A8DADC;
+  --state-distracted: #F4A261;
+  
+  /* Design Tokens */
+  --background: var(--cream);
+  --foreground: var(--text-dark);
+  --primary: var(--coral);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--beige);
+  --secondary-foreground: var(--text-dark);
+  --muted: var(--beige-light);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--soft-blue);
+  --accent-foreground: var(--text-dark);
+  --border: var(--beige);
+  --input: var(--beige);
+  --ring: var(--coral);
+  --radius: 1rem;
+  
+  /* Chart Colors */
+  --chart-1: var(--coral);
+  --chart-2: var(--soft-blue);
+  --chart-3: var(--beige);
+  --chart-4: var(--coral-light);
+  --chart-5: var(--state-calm);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -9,33 +56,92 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0f172a;
-  color: #f1f5f9;
+  background-color: var(--cream);
+  color: var(--text-dark);
 }
 
 #root {
   min-height: 100vh;
 }
 
+/* Custom scrollbar for warm aesthetic */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: var(--beige-light);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: var(--beige);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: var(--coral);
+}
+
+/* Utility classes for the warm design system */
+.card-warm {
+  background: var(--card);
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--beige);
+}
+
+.btn-primary {
+  background: var(--coral);
+  color: white;
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  box-shadow: 0 4px 6px -1px rgba(224, 122, 95, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: var(--coral-light);
+  box-shadow: 0 6px 8px -1px rgba(224, 122, 95, 0.4);
+}
+
+.btn-secondary {
+  background: var(--beige-light);
+  color: var(--text-dark);
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--beige);
+}
+
+/* Pulse animation for heart rate indicator */
+@keyframes pulse-coral {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-coral {
+  animation: pulse-coral 2s ease-in-out infinite;
+}
+
+/* Smooth transitions */
+.transition-warm {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

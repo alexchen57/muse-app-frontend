@@ -12,35 +12,65 @@ export function DeviceStatus({ name, status, icon }: DeviceStatusProps) {
   const { isConnected, batteryLevel } = status;
 
   return (
-    <div className="flex items-center gap-3 bg-slate-800/30 rounded-lg p-3">
-      {icon && <div className="text-slate-400">{icon}</div>}
-      <div className="flex-1">
-        <div className="text-sm font-medium text-white">{name}</div>
-        <div className="flex items-center gap-2 text-xs text-slate-400">
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      background: 'white',
+      borderRadius: '12px',
+      padding: '14px 16px',
+      border: '1px solid var(--beige)',
+      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.03)'
+    }}>
+      {icon && (
+        <div style={{ color: isConnected ? 'var(--coral)' : 'var(--text-muted)' }}>
+          {icon}
+        </div>
+      )}
+      <div style={{ flex: 1 }}>
+        <div style={{ 
+          fontSize: '14px', 
+          fontWeight: '500', 
+          color: 'var(--text-dark)' 
+        }}>
+          {name}
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px', 
+          fontSize: '12px', 
+          color: 'var(--text-muted)',
+          marginTop: '2px'
+        }}>
           {isConnected ? (
             <>
-              <Wifi className="w-3 h-3 text-green-500" />
-              <span className="text-green-500">Connected</span>
+              <Wifi size={12} style={{ color: 'var(--state-calm)' }} />
+              <span style={{ color: 'var(--state-calm)' }}>Connected</span>
             </>
           ) : (
             <>
-              <WifiOff className="w-3 h-3 text-slate-500" />
-              <span className="text-slate-500">Disconnected</span>
+              <WifiOff size={12} style={{ color: 'var(--text-muted)' }} />
+              <span>Disconnected</span>
             </>
           )}
           {batteryLevel !== undefined && (
             <>
-              <span className="mx-1">•</span>
-              <Battery className="w-3 h-3" />
+              <span style={{ color: 'var(--beige)' }}>•</span>
+              <Battery size={12} />
               <span>{batteryLevel}%</span>
             </>
           )}
         </div>
       </div>
       <div
-        className={`w-2 h-2 rounded-full ${
-          isConnected ? 'bg-green-500' : 'bg-slate-600'
-        }`}
+        style={{
+          width: '10px',
+          height: '10px',
+          borderRadius: '50%',
+          background: isConnected ? 'var(--state-calm)' : 'var(--beige)',
+          boxShadow: isConnected ? '0 0 8px rgba(129, 178, 154, 0.5)' : 'none'
+        }}
       />
     </div>
   );

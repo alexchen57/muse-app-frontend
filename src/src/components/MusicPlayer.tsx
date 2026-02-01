@@ -1,11 +1,12 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { Play, Pause, Volume2, VolumeX, Volume1 } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 
 /**
  * Fade duration in milliseconds (per PRD requirement: 2 seconds)
  */
 const FADE_DURATION = 2000;
-const FADE_INTERVAL = 50; // Update every 50ms
+const FADE_INTERVAL = 50;
 
 /**
  * Format duration in seconds to mm:ss
@@ -17,7 +18,6 @@ function formatTime(seconds: number): string {
 }
 
 export function MusicPlayer() {
-  // Store state
   const { 
     currentMusic, 
     isPlaying, 
@@ -26,17 +26,14 @@ export function MusicPlayer() {
     setVolume 
   } = useAppStore();
 
-  // Audio element ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
-  // Local state for UI
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isFading, setIsFading] = useState(false);
 
-  // Create object URL for audio blob when music changes
   useEffect(() => {
     if (currentMusic?.audioBlob) {
       const url = URL.createObjectURL(currentMusic.audioBlob);
@@ -50,7 +47,6 @@ export function MusicPlayer() {
     }
   }, [currentMusic]);
 
-  // Fade in effect
   const fadeIn = useCallback(() => {
     if (!audioRef.current) return;
     
@@ -78,7 +74,6 @@ export function MusicPlayer() {
     }, FADE_INTERVAL);
   }, [volume]);
 
-  // Fade out effect
   const fadeOut = useCallback(() => {
     if (!audioRef.current) return;
     
@@ -106,11 +101,9 @@ export function MusicPlayer() {
     }, FADE_INTERVAL);
   }, []);
 
-  // Handle play/pause with fade
   useEffect(() => {
     if (!audioRef.current || !audioUrl) return;
     
-    // Clear any existing fade
     if (fadeIntervalRef.current) {
       clearInterval(fadeIntervalRef.current);
     }
@@ -128,25 +121,21 @@ export function MusicPlayer() {
     };
   }, [isPlaying, audioUrl, fadeIn, fadeOut]);
 
-  // Update volume (without fade)
   useEffect(() => {
     if (audioRef.current && !isFading) {
       audioRef.current.volume = volume;
     }
   }, [volume, isFading]);
 
-  // Toggle play/pause
   const handlePlayPause = useCallback(() => {
     setIsPlaying(!isPlaying);
   }, [isPlaying, setIsPlaying]);
 
-  // Handle volume change
   const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseFloat(e.target.value);
     setVolume(newVolume);
   }, [setVolume]);
 
-  // Handle seek
   const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (audioRef.current) {
       const newTime = parseFloat(e.target.value);
@@ -155,39 +144,38 @@ export function MusicPlayer() {
     }
   }, []);
 
-  // Update current time
   const handleTimeUpdate = useCallback(() => {
     if (audioRef.current) {
       setCurrentTime(audioRef.current.currentTime);
     }
   }, []);
 
-  // Handle audio loaded
   const handleLoadedMetadata = useCallback(() => {
     if (audioRef.current) {
       setDuration(audioRef.current.duration);
     }
   }, []);
 
-  // Handle audio ended
   const handleEnded = useCallback(() => {
     setIsPlaying(false);
     setCurrentTime(0);
   }, [setIsPlaying]);
 
-  // Derived values
   const displayVolume = Math.round(volume * 100);
   const hasMusic = currentMusic !== null;
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  const VolumeIcon = displayVolume === 0 ? VolumeX : displayVolume < 50 ? Volume1 : Volume2;
+
   return (
     <div style={{
-      background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%)',
+      background: 'var(--card)',
       borderRadius: '16px',
       padding: '24px',
-      border: '1px solid rgba(71, 85, 105, 0.5)'
+      border: '1px solid var(--beige)',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+      transition: 'all 0.3s ease'
     }}>
-      {/* Hidden audio element */}
       {audioUrl && (
         <audio
           ref={audioRef}
@@ -198,22 +186,23 @@ export function MusicPlayer() {
         />
       )}
       
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
         {/* Album Art / Placeholder */}
         <div style={{
           width: '80px',
           height: '80px',
           background: hasMusic 
-            ? 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)'
-            : 'linear-gradient(135deg, #475569 0%, #334155 100%)',
-          borderRadius: '12px',
+            ? 'linear-gradient(135deg, #E07A5F 0%, #F4A261 100%)'
+            : 'linear-gradient(135deg, var(--beige) 0%, var(--beige-light) 100%)',
+          borderRadius: '16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '32px',
           flexShrink: 0,
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          boxShadow: hasMusic ? '0 4px 12px rgba(224, 122, 95, 0.3)' : 'none'
         }}>
           {currentMusic?.coverUrl ? (
             <img 
@@ -228,7 +217,7 @@ export function MusicPlayer() {
             <div style={{
               position: 'absolute',
               inset: 0,
-              background: 'rgba(0,0,0,0.3)',
+              background: 'rgba(255,255,255,0.3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -241,10 +230,19 @@ export function MusicPlayer() {
         
         <div style={{ flex: 1 }}>
           {/* Track Info */}
-          <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '4px' }}>
+          <div style={{ 
+            fontSize: '18px', 
+            fontWeight: '600', 
+            marginBottom: '4px',
+            color: 'var(--text-dark)'
+          }}>
             {hasMusic ? currentMusic.title : 'No Track Selected'}
           </div>
-          <div style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '12px' }}>
+          <div style={{ 
+            fontSize: '14px', 
+            color: 'var(--text-muted)', 
+            marginBottom: '16px' 
+          }}>
             {hasMusic 
               ? `${currentMusic.artist || 'Unknown Artist'} • ${currentMusic.bpm || '?'} BPM`
               : 'Waiting for recommendation...'}
@@ -252,29 +250,43 @@ export function MusicPlayer() {
           
           {/* Progress Bar */}
           {hasMusic && (
-            <div style={{ marginBottom: '12px' }}>
-              <input
-                type="range"
-                min="0"
-                max={duration || 100}
-                value={currentTime}
-                onChange={handleSeek}
-                disabled={!hasMusic}
-                style={{
-                  width: '100%',
-                  height: '4px',
-                  appearance: 'none',
-                  background: `linear-gradient(to right, #8b5cf6 ${progress}%, #475569 ${progress}%)`,
-                  borderRadius: '2px',
-                  cursor: hasMusic ? 'pointer' : 'default'
-                }}
-              />
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ position: 'relative', height: '6px' }}>
+                <input
+                  type="range"
+                  min="0"
+                  max={duration || 100}
+                  value={currentTime}
+                  onChange={handleSeek}
+                  disabled={!hasMusic}
+                  style={{
+                    width: '100%',
+                    height: '6px',
+                    appearance: 'none',
+                    background: 'var(--beige)',
+                    borderRadius: '3px',
+                    cursor: hasMusic ? 'pointer' : 'default',
+                    position: 'relative',
+                    zIndex: 1
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  height: '6px',
+                  width: `${progress}%`,
+                  background: '#E07A5F',
+                  borderRadius: '3px',
+                  pointerEvents: 'none'
+                }} />
+              </div>
               <div style={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
-                fontSize: '11px', 
-                color: '#64748b',
-                marginTop: '4px'
+                fontSize: '12px', 
+                color: 'var(--text-muted)',
+                marginTop: '6px'
               }}>
                 <span>{formatTime(currentTime)}</span>
                 <span>{formatTime(duration)}</span>
@@ -289,10 +301,10 @@ export function MusicPlayer() {
               onClick={handlePlayPause}
               disabled={!hasMusic}
               style={{
-                width: '48px',
-                height: '48px',
-                background: hasMusic ? 'white' : '#475569',
-                color: '#0f172a',
+                width: '52px',
+                height: '52px',
+                background: hasMusic ? '#E07A5F' : 'var(--beige)',
+                color: hasMusic ? 'white' : 'var(--text-muted)',
                 border: 'none',
                 borderRadius: '50%',
                 fontSize: '18px',
@@ -301,37 +313,48 @@ export function MusicPlayer() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: hasMusic ? 1 : 0.5,
-                transition: 'transform 0.1s ease'
+                transition: 'all 0.2s ease',
+                boxShadow: hasMusic ? '0 4px 12px rgba(224, 122, 95, 0.3)' : 'none'
               }}
             >
-              {isPlaying ? '⏸' : '▶'}
+              {isPlaying ? <Pause size={22} /> : <Play size={22} style={{ marginLeft: '2px' }} />}
             </button>
             
             {/* Volume Control */}
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '14px', color: '#94a3b8' }}>
-                {displayVolume === 0 ? '🔇' : displayVolume < 50 ? '🔉' : '🔊'}
-              </span>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={volume}
-                onChange={handleVolumeChange}
-                style={{
-                  flex: 1,
-                  height: '4px',
-                  appearance: 'none',
-                  background: `linear-gradient(to right, white ${displayVolume}%, #475569 ${displayVolume}%)`,
-                  borderRadius: '2px',
-                  cursor: 'pointer'
-                }}
-              />
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <VolumeIcon size={18} style={{ color: 'var(--text-muted)' }} />
+              <div style={{ flex: 1, position: 'relative', height: '6px' }}>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={volume}
+                  onChange={handleVolumeChange}
+                  style={{
+                    width: '100%',
+                    height: '6px',
+                    appearance: 'none',
+                    background: 'var(--beige)',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  height: '6px',
+                  width: `${displayVolume}%`,
+                  background: '#A8DADC',
+                  borderRadius: '3px',
+                  pointerEvents: 'none'
+                }} />
+              </div>
               <span style={{ 
                 fontSize: '12px', 
-                color: '#94a3b8', 
-                width: '32px', 
+                color: 'var(--text-muted)', 
+                width: '36px', 
                 textAlign: 'right' 
               }}>
                 {displayVolume}%
@@ -346,14 +369,22 @@ export function MusicPlayer() {
         <div style={{
           marginTop: '16px',
           paddingTop: '16px',
-          borderTop: '1px solid rgba(71, 85, 105, 0.3)',
-          fontSize: '12px',
-          color: '#64748b',
+          borderTop: '1px solid var(--beige)',
+          fontSize: '13px',
+          color: 'var(--text-muted)',
           display: 'flex',
           alignItems: 'center',
           gap: '8px'
         }}>
-          <span>🎯</span>
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '24px',
+            height: '24px',
+            background: 'var(--beige-light)',
+            borderRadius: '6px'
+          }}>🎯</span>
           <span>
             Recommended based on your current state • Genre: {currentMusic.genre}
           </span>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, History, Music, Settings, Activity, Heart, Brain, Play, Pause, Volume2, TrendingUp, Calendar, Clock } from 'lucide-react';
+import { Home, History, Music, Settings, Heart, Brain, TrendingUp, Calendar, Clock, Sun, Moon } from 'lucide-react';
 import { MusicLibraryView } from './src/views/MusicLibraryView';
 import { MusicPlayer } from './src/components/MusicPlayer';
 import { db } from './src/utils/db';
@@ -28,7 +28,7 @@ interface HistoryRecord {
 }
 
 class MusicErrorBoundary extends React.Component<
-  { children: React.ReactNode },
+  { children: React.ReactNode; isDark: boolean },
   { hasError: boolean; errorMessage: string }
 > {
   state = { hasError: false, errorMessage: '' };
@@ -45,17 +45,16 @@ class MusicErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <div style={{
-          background: 'rgba(30, 41, 59, 0.5)',
-          backdropFilter: 'blur(10px)',
+          background: 'var(--card)',
           borderRadius: '16px',
           padding: '24px',
-          border: '1px solid rgba(71, 85, 105, 0.5)',
-          color: '#fca5a5'
+          border: '1px solid var(--beige)',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
         }}>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: 'var(--coral)' }}>
             Music Library failed to load
           </div>
-          <div style={{ fontSize: '13px', color: '#94a3b8' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
             {this.state.errorMessage || 'Unknown error'}
           </div>
         </div>
@@ -76,8 +75,24 @@ function App() {
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [musicLibrary, setMusicLibrary] = useState<MusicMetadata[]>([]);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Check localStorage or system preference
+    const saved = localStorage.getItem('muse-theme');
+    if (saved) return saved === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
   const previousStateRef = useRef<WorkState>(currentState);
   const playHistoryRef = useRef<string[]>([]);
+
+  // Apply dark mode class to document
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('muse-theme', isDarkMode ? 'dark' : 'light');
+  }, [isDarkMode]);
 
   // Zustand store for music player
   const { 
@@ -86,24 +101,22 @@ function App() {
     currentMusic 
   } = useAppStore();
 
-  // State configuration
+  // State configuration - colors work in both themes
   const stateConfig = {
-    calm: { emoji: '😌', label: 'Calm', color: '#4CAF50', description: 'Stable heart rate, low MWL, good condition' },
-    anxious: { emoji: '😰', label: 'Stressed', color: '#F44336', description: 'Elevated heart rate and MWL, need relaxation' },
-    focused: { emoji: '🎯', label: 'Productive', color: '#2196F3', description: 'Moderate heart rate and MWL, high efficiency' },
-    distracted: { emoji: '😵', label: 'Distracted', color: '#FF9800', description: 'High MWL but low output, need adjustment' }
+    calm: { emoji: '😌', label: 'Calm', color: '#81B29A', description: 'Stable heart rate, low MWL, good condition' },
+    anxious: { emoji: '😰', label: 'Stressed', color: '#E07A5F', description: 'Elevated heart rate and MWL, need relaxation' },
+    focused: { emoji: '🎯', label: 'Productive', color: '#A8DADC', description: 'Moderate heart rate and MWL, high efficiency' },
+    distracted: { emoji: '😵', label: 'Distracted', color: '#F4A261', description: 'High MWL but low output, need adjustment' }
   };
 
   // Simulate real-time data updates
   useEffect(() => {
     const interval = setInterval(() => {
-      // Simulate heart rate fluctuation (60-100 bpm)
       setHeartRate(prev => {
         const change = (Math.random() - 0.5) * 5;
         return Math.max(60, Math.min(100, prev + change));
       });
 
-      // Simulate MWL fluctuation (30-90%)
       setMwl(prev => {
         const change = (Math.random() - 0.5) * 10;
         return Math.max(30, Math.min(90, prev + change));
@@ -125,7 +138,6 @@ function App() {
     };
     loadMusicLibrary();
 
-    // Refresh music library periodically (in case user uploads new music)
     const refreshInterval = setInterval(loadMusicLibrary, 10000);
     return () => clearInterval(refreshInterval);
   }, []);
@@ -147,14 +159,11 @@ function App() {
   useEffect(() => {
     if (!autoPlayEnabled || musicLibrary.length === 0) return;
     
-    // Only trigger when state actually changes
     if (previousStateRef.current === currentState) return;
     previousStateRef.current = currentState;
 
-    // Map to UserStateType
     const userStateType = stateMapping[currentState];
 
-    // Default user preferences (can be customized later)
     const defaultPreferences = {
       id: 'default',
       userId: 'user',
@@ -167,7 +176,6 @@ function App() {
       updatedAt: Date.now()
     };
 
-    // Get recommendation
     const recommendedMusic = musicRecommendationService.recommendMusic(
       userStateType,
       heartRate,
@@ -177,13 +185,11 @@ function App() {
     );
 
     if (recommendedMusic) {
-      // Add to play history (keep last 10)
       playHistoryRef.current = [
         recommendedMusic.id,
         ...playHistoryRef.current.slice(0, 9)
       ];
 
-      // Set music and start playing
       setCurrentMusic(recommendedMusic);
       setStoreIsPlaying(true);
       
@@ -202,10 +208,9 @@ function App() {
       };
       setHistory(prev => {
         const newHistory = [...prev, record];
-        // Keep only the last 100 records
         return newHistory.slice(-100);
       });
-    }, 5000); // Record every 5 seconds
+    }, 5000);
 
     return () => clearInterval(recordInterval);
   }, [heartRate, mwl, currentState]);
@@ -239,40 +244,90 @@ function App() {
     return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
   };
 
+  // Card style helper - uses CSS variables for theming
+  const cardStyle: React.CSSProperties = {
+    background: 'var(--card)',
+    borderRadius: '16px',
+    padding: '24px',
+    border: '1px solid var(--beige)',
+    boxShadow: isDarkMode 
+      ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+      : '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+    transition: 'all 0.3s ease'
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-      color: 'white',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      background: 'var(--cream)',
+      color: 'var(--text-dark)',
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+      transition: 'background-color 0.3s ease, color 0.3s ease'
     }}>
       {/* Header */}
       <header style={{
-        background: 'rgba(15, 23, 42, 0.9)',
-        backdropFilter: 'blur(10px)',
-        borderBottom: '1px solid rgba(71, 85, 105, 0.5)',
+        background: 'var(--card)',
+        borderBottom: '1px solid var(--beige)',
         padding: '16px 0',
         position: 'sticky',
         top: 0,
-        zIndex: 100
+        zIndex: 100,
+        boxShadow: isDarkMode 
+          ? '0 1px 3px rgba(0, 0, 0, 0.3)' 
+          : '0 1px 3px rgba(0, 0, 0, 0.05)',
+        transition: 'all 0.3s ease'
       }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-              borderRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Activity style={{ width: '24px', height: '24px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                background: 'linear-gradient(135deg, var(--coral) 0%, var(--coral-light) 100%)',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 6px rgba(224, 122, 95, 0.2)'
+              }}>
+                <Heart style={{ width: '24px', height: '24px', color: 'white', fill: 'white' }} />
+              </div>
+              <div>
+                <h1 style={{ fontSize: '22px', fontWeight: '700', margin: 0, letterSpacing: '0.5px', color: 'var(--text-dark)' }}>MUSE</h1>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>Multi-sensory Emotional Regulation System</p>
+              </div>
             </div>
-            <div>
-              <h1 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0, letterSpacing: '0.5px' }}>MUSE</h1>
-              <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>Multi-sensory Emotional Regulation System</p>
-            </div>
+
+            {/* Day/Night Toggle */}
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                background: isDarkMode ? 'var(--beige)' : 'var(--beige-light)',
+                border: '1px solid var(--beige)',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                color: 'var(--text-dark)',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {isDarkMode ? (
+                <>
+                  <Sun size={18} style={{ color: '#F4A261' }} />
+                  <span>Light Mode</span>
+                </>
+              ) : (
+                <>
+                  <Moon size={18} style={{ color: '#6366f1' }} />
+                  <span>Dark Mode</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       </header>
@@ -283,13 +338,16 @@ function App() {
           {/* Sidebar Navigation */}
           <aside style={{ width: '240px', flexShrink: 0 }}>
             <nav style={{
-              background: 'rgba(30, 41, 59, 0.5)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '12px',
+              background: 'var(--card)',
+              borderRadius: '16px',
               padding: '16px',
-              border: '1px solid rgba(71, 85, 105, 0.5)',
+              border: '1px solid var(--beige)',
               position: 'sticky',
-              top: '100px'
+              top: '100px',
+              boxShadow: isDarkMode 
+                ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+                : '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+              transition: 'all 0.3s ease'
             }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {[
@@ -306,25 +364,28 @@ function App() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
-                      padding: '12px 16px',
-                      borderRadius: '8px',
+                      padding: '14px 16px',
+                      borderRadius: '12px',
                       border: 'none',
-                      background: currentView === id ? '#3b82f6' : 'transparent',
-                      color: currentView === id ? 'white' : '#cbd5e1',
+                      background: currentView === id ? 'var(--coral)' : 'transparent',
+                      color: currentView === id ? 'white' : 'var(--text-muted)',
                       cursor: 'pointer',
                       fontSize: '14px',
                       fontWeight: '500',
                       transition: 'all 0.2s',
-                      fontFamily: 'inherit'
+                      fontFamily: 'inherit',
+                      boxShadow: currentView === id ? '0 4px 6px rgba(224, 122, 95, 0.25)' : 'none'
                     }}
                     onMouseEnter={(e) => {
                       if (currentView !== id) {
-                        e.currentTarget.style.background = 'rgba(51, 65, 85, 0.5)';
+                        e.currentTarget.style.background = 'var(--beige-light)';
+                        e.currentTarget.style.color = 'var(--text-dark)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (currentView !== id) {
                         e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'var(--text-muted)';
                       }
                     }}
                   >
@@ -343,35 +404,37 @@ function App() {
                 {/* Device Status */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                   <div style={{
-                    background: 'rgba(30, 41, 59, 0.3)',
-                    backdropFilter: 'blur(10px)',
+                    background: 'var(--card)',
                     borderRadius: '12px',
                     padding: '16px',
-                    border: '1px solid rgba(71, 85, 105, 0.3)',
+                    border: '1px solid var(--beige)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px'
+                    gap: '12px',
+                    boxShadow: isDarkMode ? '0 2px 4px rgba(0, 0, 0, 0.2)' : '0 2px 4px rgba(0, 0, 0, 0.03)',
+                    transition: 'all 0.3s ease'
                   }}>
                     <div style={{
                       width: '40px',
                       height: '40px',
-                      background: 'rgba(239, 68, 68, 0.2)',
-                      borderRadius: '8px',
+                      background: isDarkMode ? 'rgba(224, 122, 95, 0.2)' : 'rgba(224, 122, 95, 0.15)',
+                      borderRadius: '10px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
-                      <Heart style={{ width: '20px', height: '20px', color: '#ef4444' }} />
+                      <Heart style={{ width: '20px', height: '20px', color: '#E07A5F' }} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>Heart Rate Sensor</div>
-                      <div style={{ fontSize: '12px', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px', color: 'var(--text-dark)' }}>Heart Rate Sensor</div>
+                      <div style={{ fontSize: '12px', color: '#81B29A', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ 
-                          width: '6px', 
-                          height: '6px', 
+                          width: '8px', 
+                          height: '8px', 
                           borderRadius: '50%', 
-                          background: '#4ade80',
-                          display: 'inline-block'
+                          background: '#81B29A',
+                          display: 'inline-block',
+                          boxShadow: '0 0 6px #81B29A'
                         }} />
                         Connected • 85%
                       </div>
@@ -379,35 +442,37 @@ function App() {
                   </div>
 
                   <div style={{
-                    background: 'rgba(30, 41, 59, 0.3)',
-                    backdropFilter: 'blur(10px)',
+                    background: 'var(--card)',
                     borderRadius: '12px',
                     padding: '16px',
-                    border: '1px solid rgba(71, 85, 105, 0.3)',
+                    border: '1px solid var(--beige)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px'
+                    gap: '12px',
+                    boxShadow: isDarkMode ? '0 2px 4px rgba(0, 0, 0, 0.2)' : '0 2px 4px rgba(0, 0, 0, 0.03)',
+                    transition: 'all 0.3s ease'
                   }}>
                     <div style={{
                       width: '40px',
                       height: '40px',
-                      background: 'rgba(139, 92, 246, 0.2)',
-                      borderRadius: '8px',
+                      background: isDarkMode ? 'rgba(168, 218, 220, 0.2)' : 'rgba(168, 218, 220, 0.25)',
+                      borderRadius: '10px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
-                      <Brain style={{ width: '20px', height: '20px', color: '#8b5cf6' }} />
+                      <Brain style={{ width: '20px', height: '20px', color: '#7FBFC1' }} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>MWL Monitoring Device</div>
-                      <div style={{ fontSize: '12px', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px', color: 'var(--text-dark)' }}>MWL Monitoring Device</div>
+                      <div style={{ fontSize: '12px', color: '#81B29A', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ 
-                          width: '6px', 
-                          height: '6px', 
+                          width: '8px', 
+                          height: '8px', 
                           borderRadius: '50%', 
-                          background: '#4ade80',
-                          display: 'inline-block'
+                          background: '#81B29A',
+                          display: 'inline-block',
+                          boxShadow: '0 0 6px #81B29A'
                         }} />
                         Connected • 90%
                       </div>
@@ -419,60 +484,60 @@ function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
                   {/* Heart Rate Card */}
                   <div style={{
-                    background: 'rgba(30, 41, 59, 0.5)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: '16px',
-                    padding: '24px',
-                    border: '1px solid rgba(71, 85, 105, 0.5)',
-                    borderLeft: '4px solid #ef4444'
+                    ...cardStyle,
+                    borderLeft: '4px solid #E07A5F'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                      <Heart style={{ width: '18px', height: '18px', color: '#ef4444' }} />
-                      <div style={{ fontSize: '14px', color: '#94a3b8', fontWeight: '500' }}>Heart Rate (HR)</div>
+                      <Heart style={{ width: '18px', height: '18px', color: '#E07A5F' }} />
+                      <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: '500' }}>Heart Rate (HR)</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '12px' }}>
-                      <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#ef4444', lineHeight: 1 }}>
+                      <div style={{ fontSize: '48px', fontWeight: '300', color: '#E07A5F', lineHeight: 1 }}>
                         {Math.round(heartRate)}
                       </div>
-                      <div style={{ fontSize: '18px', color: '#94a3b8' }}>bpm</div>
+                      <div style={{ fontSize: '18px', color: 'var(--text-muted)' }}>bpm</div>
                     </div>
                     <div style={{
                       padding: '8px 12px',
-                      background: 'rgba(239, 68, 68, 0.1)',
-                      borderRadius: '6px',
+                      background: isDarkMode ? 'rgba(224, 122, 95, 0.2)' : 'rgba(224, 122, 95, 0.12)',
+                      borderRadius: '8px',
                       fontSize: '13px',
-                      color: '#fca5a5'
+                      color: '#E07A5F',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
                     }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#E07A5F' }} />
                       {heartRate < 70 ? 'Low' : heartRate > 85 ? 'High' : 'Normal Range'}
                     </div>
                   </div>
 
                   {/* MWL Card */}
                   <div style={{
-                    background: 'rgba(30, 41, 59, 0.5)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: '16px',
-                    padding: '24px',
-                    border: '1px solid rgba(71, 85, 105, 0.5)',
-                    borderLeft: '4px solid #8b5cf6'
+                    ...cardStyle,
+                    borderLeft: '4px solid #A8DADC'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                      <Brain style={{ width: '18px', height: '18px', color: '#8b5cf6' }} />
-                      <div style={{ fontSize: '14px', color: '#94a3b8', fontWeight: '500' }}>Mental Workload (MWL)</div>
+                      <Brain style={{ width: '18px', height: '18px', color: '#7FBFC1' }} />
+                      <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: '500' }}>Mental Workload (MWL)</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '12px' }}>
-                      <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#8b5cf6', lineHeight: 1 }}>
+                      <div style={{ fontSize: '48px', fontWeight: '300', color: '#7FBFC1', lineHeight: 1 }}>
                         {Math.round(mwl)}
                       </div>
-                      <div style={{ fontSize: '18px', color: '#94a3b8' }}>%</div>
+                      <div style={{ fontSize: '18px', color: 'var(--text-muted)' }}>%</div>
                     </div>
                     <div style={{
                       padding: '8px 12px',
-                      background: 'rgba(139, 92, 246, 0.1)',
-                      borderRadius: '6px',
+                      background: isDarkMode ? 'rgba(168, 218, 220, 0.2)' : 'rgba(168, 218, 220, 0.25)',
+                      borderRadius: '8px',
                       fontSize: '13px',
-                      color: '#c4b5fd'
+                      color: '#7FBFC1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
                     }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#7FBFC1' }} />
                       {mwl < 40 ? 'Low Load' : mwl > 70 ? 'High Load' : 'Moderate Load'}
                     </div>
                   </div>
@@ -480,45 +545,57 @@ function App() {
 
                 {/* State Indicator */}
                 <div style={{
-                  background: 'rgba(30, 41, 59, 0.5)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  border: '1px solid rgba(71, 85, 105, 0.5)',
+                  ...cardStyle,
                   borderLeft: `4px solid ${currentStateInfo.color}`
                 }}>
-                  <div style={{ fontSize: '14px', color: '#94a3b8', fontWeight: '500', marginBottom: '20px' }}>
+                  <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: '500', marginBottom: '20px' }}>
                     Current Work State
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '20px' }}>
                     <div style={{
                       width: '72px',
                       height: '72px',
-                      background: `${currentStateInfo.color}20`,
+                      background: isDarkMode ? `${currentStateInfo.color}30` : `${currentStateInfo.color}20`,
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '36px',
-                      flexShrink: 0
+                      flexShrink: 0,
+                      boxShadow: `0 4px 12px ${currentStateInfo.color}30`
                     }}>
                       {currentStateInfo.emoji}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '36px', fontWeight: 'bold', color: currentStateInfo.color, marginBottom: '8px' }}>
+                      <div style={{ fontSize: '32px', fontWeight: '600', color: currentStateInfo.color, marginBottom: '8px' }}>
                         {currentStateInfo.label}
                       </div>
-                      <div style={{ fontSize: '14px', color: '#94a3b8' }}>
-                        Confidence: {Math.round(75 + Math.random() * 20)}%
+                      <div style={{ fontSize: '14px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        Confidence: 
+                        <div style={{ 
+                          width: '60px', 
+                          height: '4px', 
+                          background: 'var(--beige)', 
+                          borderRadius: '2px',
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{ 
+                            width: `${75 + Math.random() * 20}%`, 
+                            height: '100%', 
+                            background: currentStateInfo.color,
+                            borderRadius: '2px'
+                          }} />
+                        </div>
+                        {Math.round(75 + Math.random() * 20)}%
                       </div>
                     </div>
                   </div>
                   <div style={{
-                    padding: '14px',
-                    background: 'rgba(15, 23, 42, 0.5)',
-                    borderRadius: '8px',
+                    padding: '14px 16px',
+                    background: 'var(--beige-light)',
+                    borderRadius: '12px',
                     fontSize: '14px',
-                    color: '#cbd5e1',
+                    color: 'var(--text-muted)',
                     lineHeight: 1.6
                   }}>
                     {currentStateInfo.description}
@@ -529,74 +606,81 @@ function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {/* Auto-play toggle and recommendation info */}
                   <div style={{
-                    background: 'rgba(30, 41, 59, 0.5)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    border: '1px solid rgba(71, 85, 105, 0.5)',
+                    ...cardStyle,
+                    padding: '16px 20px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between'
                   }}>
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px', color: 'var(--text-dark)' }}>
                         🎯 State-Based Music Recommendation
                       </div>
-                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                         {musicLibrary.length === 0 
                           ? 'No music uploaded. Go to Music Library to upload songs.'
                           : `${musicLibrary.length} songs available • Recommending based on "${currentStateInfo.label}" state`
                         }
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '13px', color: '#94a3b8' }}>Auto-play</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Auto-play</span>
                       <button
                         onClick={() => setAutoPlayEnabled(!autoPlayEnabled)}
                         style={{
-                          width: '44px',
-                          height: '24px',
-                          borderRadius: '12px',
+                          width: '48px',
+                          height: '26px',
+                          borderRadius: '13px',
                           border: 'none',
-                          background: autoPlayEnabled ? '#3b82f6' : '#475569',
+                          background: autoPlayEnabled ? '#E07A5F' : 'var(--beige)',
                           cursor: 'pointer',
                           position: 'relative',
-                          transition: 'background 0.2s'
+                          transition: 'background 0.2s',
+                          boxShadow: autoPlayEnabled ? '0 2px 6px rgba(224, 122, 95, 0.3)' : 'none'
                         }}
                       >
                         <div style={{
-                          width: '18px',
-                          height: '18px',
+                          width: '20px',
+                          height: '20px',
                           borderRadius: '50%',
                           background: 'white',
                           position: 'absolute',
                           top: '3px',
-                          left: autoPlayEnabled ? '23px' : '3px',
-                          transition: 'left 0.2s'
+                          left: autoPlayEnabled ? '25px' : '3px',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
                         }} />
                       </button>
                     </div>
                   </div>
 
                   {/* Music Player Component */}
-                  <MusicErrorBoundary>
+                  <MusicErrorBoundary isDark={isDarkMode}>
                     <MusicPlayer />
                   </MusicErrorBoundary>
 
                   {/* Recommendation Strategy Info */}
                   {currentMusic && (
                     <div style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      borderRadius: '8px',
-                      padding: '12px 16px',
-                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      background: isDarkMode ? 'rgba(168, 218, 220, 0.15)' : 'rgba(168, 218, 220, 0.2)',
+                      borderRadius: '12px',
+                      padding: '14px 18px',
+                      border: '1px solid rgba(168, 218, 220, 0.4)',
                       fontSize: '13px',
-                      color: '#93c5fd',
+                      color: '#7FBFC1',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px'
+                      gap: '10px'
                     }}>
-                      <span>💡</span>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '28px',
+                        height: '28px',
+                        background: 'var(--card)',
+                        borderRadius: '8px'
+                      }}>💡</span>
                       <span>
                         Playing "{currentMusic.title}" ({currentMusic.bpm || '?'} BPM) — 
                         {currentState === 'calm' && ' maintaining your calm state'}
@@ -613,7 +697,7 @@ function App() {
             {/* Music View */}
             {currentView === 'music' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                <MusicErrorBoundary>
+                <MusicErrorBoundary isDark={isDarkMode}>
                   <MusicPlayer />
                   <MusicLibraryView />
                 </MusicErrorBoundary>
@@ -623,20 +707,21 @@ function App() {
             {/* Settings View */}
             {currentView === 'settings' && (
               <div style={{
-                background: 'rgba(30, 41, 59, 0.5)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
+                ...cardStyle,
                 padding: '48px',
-                border: '1px solid rgba(71, 85, 105, 0.5)',
                 textAlign: 'center'
               }}>
-                <div style={{ fontSize: '72px', marginBottom: '24px' }}>
+                <div style={{ 
+                  fontSize: '72px', 
+                  marginBottom: '24px',
+                  filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
+                }}>
                   {'⚙️'}
                 </div>
-                <h2 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '12px' }}>
+                <h2 style={{ fontSize: '28px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-dark)' }}>
                   {'System Settings'}
                 </h2>
-                <p style={{ fontSize: '16px', color: '#94a3b8', marginBottom: '32px' }}>
+                <p style={{ fontSize: '16px', color: 'var(--text-muted)', marginBottom: '32px' }}>
                   {'Feature under development...'}
                 </p>
               </div>
@@ -647,24 +732,20 @@ function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {/* Header */}
                 <div style={{
-                  background: 'rgba(30, 41, 59, 0.5)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  border: '1px solid rgba(71, 85, 105, 0.5)',
+                  ...cardStyle,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between'
                 }}>
                   <div>
-                    <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>History Data Analysis</h2>
-                    <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0 }}>
+                    <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px', color: 'var(--text-dark)' }}>History Data Analysis</h2>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>
                       Records: {history.length} entries • Data updates every 5 seconds
                     </p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Calendar style={{ width: '18px', height: '18px', color: '#94a3b8' }} />
-                    <span style={{ fontSize: '14px', color: '#cbd5e1' }}>
+                    <Calendar style={{ width: '18px', height: '18px', color: '#E07A5F' }} />
+                    <span style={{ fontSize: '14px', color: 'var(--text-dark)' }}>
                       {history.length > 0 ? formatDate(history[0].timestamp) : 'No data yet'}
                     </span>
                   </div>
@@ -672,16 +753,13 @@ function App() {
 
                 {history.length === 0 ? (
                   <div style={{
-                    background: 'rgba(30, 41, 59, 0.5)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: '16px',
+                    ...cardStyle,
                     padding: '64px 48px',
-                    border: '1px solid rgba(71, 85, 105, 0.5)',
                     textAlign: 'center'
                   }}>
                     <div style={{ fontSize: '64px', marginBottom: '20px' }}>📊</div>
-                    <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '12px' }}>Waiting for data recording...</h3>
-                    <p style={{ fontSize: '14px', color: '#94a3b8' }}>System records data every 5 seconds, please wait</p>
+                    <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-dark)' }}>Waiting for data recording...</h3>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>System records data every 5 seconds, please wait</p>
                   </div>
                 ) : (
                   <>
@@ -689,81 +767,69 @@ function App() {
                     {stats && (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                         <div style={{
-                          background: 'rgba(30, 41, 59, 0.5)',
-                          backdropFilter: 'blur(10px)',
-                          borderRadius: '12px',
+                          ...cardStyle,
                           padding: '20px',
-                          border: '1px solid rgba(71, 85, 105, 0.5)',
-                          borderLeft: '4px solid #ef4444'
+                          borderLeft: '4px solid #E07A5F'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                            <Heart style={{ width: '16px', height: '16px', color: '#ef4444' }} />
-                            <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>Avg Heart Rate</span>
+                            <Heart style={{ width: '16px', height: '16px', color: '#E07A5F' }} />
+                            <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>Avg Heart Rate</span>
                           </div>
-                          <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#ef4444', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '28px', fontWeight: '300', color: '#E07A5F', marginBottom: '4px' }}>
                             {stats.avgHeartRate}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                             Range: {stats.minHeartRate}-{stats.maxHeartRate} bpm
                           </div>
                         </div>
 
                         <div style={{
-                          background: 'rgba(30, 41, 59, 0.5)',
-                          backdropFilter: 'blur(10px)',
-                          borderRadius: '12px',
+                          ...cardStyle,
                           padding: '20px',
-                          border: '1px solid rgba(71, 85, 105, 0.5)',
-                          borderLeft: '4px solid #8b5cf6'
+                          borderLeft: '4px solid #A8DADC'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                            <Brain style={{ width: '16px', height: '16px', color: '#8b5cf6' }} />
-                            <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>Avg MWL</span>
+                            <Brain style={{ width: '16px', height: '16px', color: '#7FBFC1' }} />
+                            <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>Avg MWL</span>
                           </div>
-                          <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#8b5cf6', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '28px', fontWeight: '300', color: '#7FBFC1', marginBottom: '4px' }}>
                             {stats.avgMwl}%
                           </div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                             Range: {stats.minMwl}-{stats.maxMwl}%
                           </div>
                         </div>
 
                         <div style={{
-                          background: 'rgba(30, 41, 59, 0.5)',
-                          backdropFilter: 'blur(10px)',
-                          borderRadius: '12px',
+                          ...cardStyle,
                           padding: '20px',
-                          border: '1px solid rgba(71, 85, 105, 0.5)',
-                          borderLeft: '4px solid #3b82f6'
+                          borderLeft: '4px solid #81B29A'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                            <TrendingUp style={{ width: '16px', height: '16px', color: '#3b82f6' }} />
-                            <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>Max Heart Rate</span>
+                            <TrendingUp style={{ width: '16px', height: '16px', color: '#81B29A' }} />
+                            <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>Max Heart Rate</span>
                           </div>
-                          <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#3b82f6', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '28px', fontWeight: '300', color: '#81B29A', marginBottom: '4px' }}>
                             {stats.maxHeartRate}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                             bpm
                           </div>
                         </div>
 
                         <div style={{
-                          background: 'rgba(30, 41, 59, 0.5)',
-                          backdropFilter: 'blur(10px)',
-                          borderRadius: '12px',
+                          ...cardStyle,
                           padding: '20px',
-                          border: '1px solid rgba(71, 85, 105, 0.5)',
-                          borderLeft: '4px solid #06b6d4'
+                          borderLeft: '4px solid #F4A261'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                            <Clock style={{ width: '16px', height: '16px', color: '#06b6d4' }} />
-                            <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>Recording Duration</span>
+                            <Clock style={{ width: '16px', height: '16px', color: '#F4A261' }} />
+                            <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>Recording Duration</span>
                           </div>
-                          <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#06b6d4', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '28px', fontWeight: '300', color: '#F4A261', marginBottom: '4px' }}>
                             {Math.floor((history.length * 5) / 60)}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                             minutes
                           </div>
                         </div>
@@ -772,47 +838,43 @@ function App() {
 
                     {/* State Distribution */}
                     {stats && (
-                      <div style={{
-                        background: 'rgba(30, 41, 59, 0.5)',
-                        backdropFilter: 'blur(10px)',
-                        borderRadius: '16px',
-                        padding: '24px',
-                        border: '1px solid rgba(71, 85, 105, 0.5)'
-                      }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '20px' }}>State Distribution</h3>
+                      <div style={cardStyle}>
+                        <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '20px', color: 'var(--text-dark)' }}>State Distribution</h3>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                           {Object.entries(stats.stateDistribution).map(([state, count]) => {
                             const stateInfo = stateConfig[state as WorkState];
                             const percentage = history.length > 0 ? Math.round((count / history.length) * 100) : 0;
                             return (
                               <div key={state} style={{
-                                background: 'rgba(15, 23, 42, 0.5)',
+                                background: 'var(--beige-light)',
                                 borderRadius: '12px',
                                 padding: '16px',
-                                border: `1px solid ${stateInfo.color}30`
+                                border: `1px solid ${stateInfo.color}30`,
+                                transition: 'all 0.3s ease'
                               }}>
                                 <div style={{ fontSize: '32px', marginBottom: '8px' }}>{stateInfo.emoji}</div>
-                                <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px', color: stateInfo.color }}>
+                                <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px', color: stateInfo.color }}>
                                   {stateInfo.label}
                                 </div>
-                                <div style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '8px' }}>
+                                <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '8px' }}>
                                   {count} times
                                 </div>
                                 <div style={{
                                   width: '100%',
-                                  height: '4px',
-                                  background: 'rgba(71, 85, 105, 0.5)',
-                                  borderRadius: '2px',
+                                  height: '6px',
+                                  background: 'var(--beige)',
+                                  borderRadius: '3px',
                                   overflow: 'hidden'
                                 }}>
                                   <div style={{
                                     width: `${percentage}%`,
                                     height: '100%',
                                     background: stateInfo.color,
+                                    borderRadius: '3px',
                                     transition: 'width 0.3s'
                                   }} />
                                 </div>
-                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
                                   {percentage}%
                                 </div>
                               </div>
@@ -823,14 +885,8 @@ function App() {
                     )}
 
                     {/* Simple Chart */}
-                    <div style={{
-                      background: 'rgba(30, 41, 59, 0.5)',
-                      backdropFilter: 'blur(10px)',
-                      borderRadius: '16px',
-                      padding: '24px',
-                      border: '1px solid rgba(71, 85, 105, 0.5)'
-                    }}>
-                      <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '20px' }}>Data Trend Chart</h3>
+                    <div style={cardStyle}>
+                      <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '20px', color: 'var(--text-dark)' }}>Data Trend Chart</h3>
                       <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
                         {history.slice(-30).map((record, index) => (
                           <div key={index} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
@@ -838,64 +894,58 @@ function App() {
                               width: '100%',
                               height: `${(record.heartRate - 60) / 40 * 100}%`,
                               minHeight: '10px',
-                              background: 'linear-gradient(to top, #ef4444, #fca5a5)',
-                              borderRadius: '2px 2px 0 0',
-                              opacity: 0.8
+                              background: 'linear-gradient(to top, #E07A5F, #F4A261)',
+                              borderRadius: '3px 3px 0 0',
+                              opacity: 0.9
                             }} />
                             <div style={{
                               width: '100%',
                               height: `${record.mwl}%`,
                               minHeight: '10px',
-                              background: 'linear-gradient(to top, #8b5cf6, #c4b5fd)',
-                              borderRadius: '2px 2px 0 0',
-                              opacity: 0.8
+                              background: 'linear-gradient(to top, #7FBFC1, #A8DADC)',
+                              borderRadius: '3px 3px 0 0',
+                              opacity: 0.9
                             }} />
                           </div>
                         ))}
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '16px', gap: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px', gap: '32px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ width: '12px', height: '12px', background: '#ef4444', borderRadius: '2px' }} />
-                          <span style={{ fontSize: '13px', color: '#94a3b8' }}>Heart Rate (HR)</span>
+                          <div style={{ width: '12px', height: '12px', background: '#E07A5F', borderRadius: '3px' }} />
+                          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Heart Rate (HR)</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ width: '12px', height: '12px', background: '#8b5cf6', borderRadius: '2px' }} />
-                          <span style={{ fontSize: '13px', color: '#94a3b8' }}>Mental Workload (MWL)</span>
+                          <div style={{ width: '12px', height: '12px', background: '#A8DADC', borderRadius: '3px' }} />
+                          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Mental Workload (MWL)</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Recent Records Table */}
-                    <div style={{
-                      background: 'rgba(30, 41, 59, 0.5)',
-                      backdropFilter: 'blur(10px)',
-                      borderRadius: '16px',
-                      padding: '24px',
-                      border: '1px solid rgba(71, 85, 105, 0.5)'
-                    }}>
-                      <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px' }}>Recent Records</h3>
+                    <div style={cardStyle}>
+                      <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: 'var(--text-dark)' }}>Recent Records</h3>
                       <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                           <thead>
-                            <tr style={{ borderBottom: '1px solid rgba(71, 85, 105, 0.5)' }}>
-                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>Time</th>
-                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>Heart Rate</th>
-                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>MWL</th>
-                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>State</th>
+                            <tr style={{ borderBottom: '1px solid var(--beige)' }}>
+                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>Time</th>
+                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>Heart Rate</th>
+                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>MWL</th>
+                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>State</th>
                             </tr>
                           </thead>
                           <tbody>
                             {history.slice(-10).reverse().map((record, index) => {
                               const stateInfo = stateConfig[record.state];
                               return (
-                                <tr key={index} style={{ borderBottom: '1px solid rgba(71, 85, 105, 0.3)' }}>
-                                  <td style={{ padding: '12px', fontSize: '14px', color: '#cbd5e1' }}>
+                                <tr key={index} style={{ borderBottom: '1px solid var(--beige-light)' }}>
+                                  <td style={{ padding: '12px', fontSize: '14px', color: 'var(--text-dark)' }}>
                                     {formatTime(record.timestamp)}
                                   </td>
-                                  <td style={{ padding: '12px', fontSize: '14px', color: '#ef4444', fontWeight: '500' }}>
+                                  <td style={{ padding: '12px', fontSize: '14px', color: '#E07A5F', fontWeight: '500' }}>
                                     {Math.round(record.heartRate)} bpm
                                   </td>
-                                  <td style={{ padding: '12px', fontSize: '14px', color: '#8b5cf6', fontWeight: '500' }}>
+                                  <td style={{ padding: '12px', fontSize: '14px', color: '#7FBFC1', fontWeight: '500' }}>
                                     {Math.round(record.mwl)}%
                                   </td>
                                   <td style={{ padding: '12px' }}>
@@ -903,9 +953,9 @@ function App() {
                                       display: 'inline-flex',
                                       alignItems: 'center',
                                       gap: '6px',
-                                      padding: '4px 12px',
-                                      background: `${stateInfo.color}20`,
-                                      borderRadius: '16px',
+                                      padding: '6px 12px',
+                                      background: isDarkMode ? `${stateInfo.color}25` : `${stateInfo.color}15`,
+                                      borderRadius: '20px',
                                       fontSize: '13px',
                                       color: stateInfo.color,
                                       fontWeight: '500'

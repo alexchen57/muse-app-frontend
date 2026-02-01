@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
-import { Calendar, TrendingUp } from 'lucide-react';
+import { Calendar, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { db } from '../utils/db';
 import { StateHistory } from '../types/state';
 import { STATE_LABELS, STATE_COLORS } from '../types/state';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 export function HistoryView() {
   const [stateHistory, setStateHistory] = useState<StateHistory[]>([]);
@@ -30,7 +30,6 @@ export function HistoryView() {
     }
   };
 
-  // Calculate statistics
   const stats = stateHistory.reduce(
     (acc, record) => {
       const duration = (record.endTime || Date.now()) - record.startTime;
@@ -44,7 +43,7 @@ export function HistoryView() {
 
   const pieData = Object.entries(stats).map(([state, duration]) => ({
     name: STATE_LABELS[state as keyof typeof STATE_LABELS],
-    value: duration / 1000 / 60, // Convert to minutes
+    value: duration / 1000 / 60,
     color: STATE_COLORS[state as keyof typeof STATE_COLORS],
   }));
 
@@ -55,28 +54,81 @@ export function HistoryView() {
     return hours > 0 ? `${hours}h ${remainingMinutes}m` : `${minutes}m`;
   };
 
+  // Custom state colors for the warm design
+  const warmStateColors: Record<string, string> = {
+    calm: '#81B29A',
+    stressed: '#E07A5F',
+    productive: '#A8DADC',
+    distracted: '#F4A261',
+    recovering: '#81B29A',
+    overloaded: '#E07A5F',
+  };
+
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Date Selector */}
-      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-        <div className="flex items-center gap-4">
-          <Calendar className="w-6 h-6 text-slate-400" />
-          <div className="flex-1">
-            <h2 className="text-xl font-bold text-white">State History</h2>
-            <p className="text-sm text-slate-400">
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        padding: '24px',
+        border: '1px solid var(--beige)',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            background: 'var(--beige-light)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Calendar size={24} style={{ color: 'var(--coral)' }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-dark)' }}>
+              State History
+            </h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' }}>
               {format(selectedDate, 'MMMM dd, yyyy EEEE')}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={() => setSelectedDate(subDays(selectedDate, 1))}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white transition-colors"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '10px 16px',
+                background: 'var(--beige-light)',
+                border: 'none',
+                borderRadius: '10px',
+                color: 'var(--text-dark)',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s ease'
+              }}
             >
-              Previous Day
+              <ChevronLeft size={18} />
+              Previous
             </button>
             <button
               onClick={() => setSelectedDate(new Date())}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transition-colors"
+              style={{
+                padding: '10px 20px',
+                background: 'var(--coral)',
+                border: 'none',
+                borderRadius: '10px',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 6px rgba(224, 122, 95, 0.3)'
+              }}
             >
               Today
             </button>
@@ -85,31 +137,41 @@ export function HistoryView() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+        gap: '16px' 
+      }}>
         {Object.entries(STATE_LABELS).map(([state, label]) => {
           const duration = stats[state] || 0;
           const percentage = totalDuration > 0 ? (duration / totalDuration) * 100 : 0;
+          const stateColor = warmStateColors[state] || STATE_COLORS[state as keyof typeof STATE_COLORS];
 
           return (
             <div
               key={state}
-              className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50"
               style={{
-                borderLeftColor: STATE_COLORS[state as keyof typeof STATE_COLORS],
-                borderLeftWidth: '4px',
+                background: 'white',
+                borderRadius: '16px',
+                padding: '20px',
+                border: '1px solid var(--beige)',
+                borderLeft: `4px solid ${stateColor}`,
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
               }}
             >
-              <div className="text-sm text-slate-400 mb-2">{label}</div>
-              <div
-                className="text-2xl font-bold mb-1"
-                style={{
-                  color: STATE_COLORS[state as keyof typeof STATE_COLORS],
-                }}
-              >
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                {label}
+              </div>
+              <div style={{ 
+                fontSize: '28px', 
+                fontWeight: '300', 
+                marginBottom: '4px',
+                color: stateColor
+              }}>
                 {formatDuration(duration)}
               </div>
-              <div className="text-xs text-slate-500">
-                {percentage.toFixed(1)}% duration
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                {percentage.toFixed(1)}% of session
               </div>
             </div>
           );
@@ -118,8 +180,21 @@ export function HistoryView() {
 
       {/* Pie Chart */}
       {pieData.length > 0 && (
-        <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-          <h3 className="text-lg font-bold text-white mb-4">State Distribution</h3>
+        <div style={{
+          background: 'white',
+          borderRadius: '16px',
+          padding: '24px',
+          border: '1px solid var(--beige)',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+        }}>
+          <h3 style={{ 
+            fontSize: '18px', 
+            fontWeight: '600', 
+            color: 'var(--text-dark)', 
+            marginBottom: '20px' 
+          }}>
+            State Distribution
+          </h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -131,8 +206,10 @@ export function HistoryView() {
                   `${name} ${(percent * 100).toFixed(0)}%`
                 }
                 outerRadius={100}
+                innerRadius={60}
                 fill="#8884d8"
                 dataKey="value"
+                paddingAngle={2}
               >
                 {pieData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
@@ -140,9 +217,10 @@ export function HistoryView() {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1e293b',
-                  border: '1px solid #334155',
-                  borderRadius: '8px',
+                  backgroundColor: 'white',
+                  border: '1px solid var(--beige)',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
                 }}
                 formatter={(value: number) => `${value.toFixed(0)} minutes`}
               />
@@ -152,60 +230,101 @@ export function HistoryView() {
       )}
 
       {/* Timeline */}
-      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5" />
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        padding: '24px',
+        border: '1px solid var(--beige)',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+      }}>
+        <h3 style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontSize: '18px', 
+          fontWeight: '600', 
+          color: 'var(--text-dark)', 
+          marginBottom: '20px' 
+        }}>
+          <TrendingUp size={20} style={{ color: 'var(--coral)' }} />
           Timeline
         </h3>
 
         {stateHistory.length === 0 ? (
-          <div className="text-center text-slate-400 py-12">
+          <div style={{ 
+            textAlign: 'center', 
+            color: 'var(--text-muted)', 
+            padding: '48px 24px' 
+          }}>
             <p>No records for this date</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {stateHistory.map((record) => (
-              <div
-                key={record.id}
-                className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg"
-              >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {stateHistory.map((record) => {
+              const stateColor = warmStateColors[record.state] || STATE_COLORS[record.state];
+              return (
                 <div
-                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  key={record.id}
                   style={{
-                    backgroundColor: STATE_COLORS[record.state],
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '16px',
+                    background: 'var(--beige-light)',
+                    borderRadius: '12px'
                   }}
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="font-medium"
-                      style={{ color: STATE_COLORS[record.state] }}
-                    >
-                      {STATE_LABELS[record.state]}
-                    </span>
-                    <span className="text-sm text-slate-400">
-                      {format(record.startTime, 'HH:mm:ss')}
-                      {record.endTime &&
-                        ` - ${format(record.endTime, 'HH:mm:ss')}`}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      (
-                      {formatDuration(
-                        (record.endTime || Date.now()) - record.startTime
-                      )}
-                      )
-                    </span>
+                >
+                  <div
+                    style={{
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      backgroundColor: stateColor,
+                      boxShadow: `0 0 8px ${stateColor}40`
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontWeight: '500', color: stateColor }}>
+                        {STATE_LABELS[record.state]}
+                      </span>
+                      <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                        {format(record.startTime, 'HH:mm:ss')}
+                        {record.endTime && ` - ${format(record.endTime, 'HH:mm:ss')}`}
+                      </span>
+                      <span style={{ 
+                        fontSize: '12px', 
+                        color: 'var(--text-muted)',
+                        background: 'white',
+                        padding: '2px 8px',
+                        borderRadius: '4px'
+                      }}>
+                        {formatDuration((record.endTime || Date.now()) - record.startTime)}
+                      </span>
+                    </div>
+                    {record.metrics && (
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: 'var(--text-muted)', 
+                      marginTop: '6px' 
+                    }}>
+                      HR: {record.metrics.heartRate} bpm • MWL: {(record.metrics.mwlIndex * 100).toFixed(0)}%
+                    </div>
+                  )}
                   </div>
-                  <div className="text-xs text-slate-500 mt-1">
-                    HR: {record.metrics.heartRate} bpm • MWL:{' '}
-                    {(record.metrics.mwlIndex * 100).toFixed(0)}%
+                  <div style={{ 
+                    fontSize: '13px', 
+                    color: 'var(--text-muted)',
+                    background: 'white',
+                    padding: '4px 10px',
+                    borderRadius: '6px'
+                  }}>
+                    {(record.avgConfidence * 100).toFixed(0)}% confidence
                   </div>
                 </div>
-                <div className="text-sm text-slate-400">
-                  {(record.confidence * 100).toFixed(0)}% confidence
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

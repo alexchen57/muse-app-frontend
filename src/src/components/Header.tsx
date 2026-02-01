@@ -1,29 +1,48 @@
+import { Heart } from 'lucide-react';
+
 interface HeaderProps {}
 
 export function Header({}: HeaderProps) {
   return (
     <header style={{
-      background: 'rgba(15, 23, 42, 0.9)',
-      borderBottom: '1px solid rgba(71, 85, 105, 0.5)',
-      padding: '16px 0'
+      background: 'white',
+      borderBottom: '1px solid var(--beige)',
+      padding: '16px 0',
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
     }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '40px',
-            height: '40px',
-            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-            borderRadius: '8px',
+            width: '44px',
+            height: '44px',
+            background: 'linear-gradient(135deg, var(--coral) 0%, var(--coral-light) 100%)',
+            borderRadius: '12px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '20px'
+            boxShadow: '0 4px 6px rgba(224, 122, 95, 0.2)'
           }}>
-            🎵
+            <Heart className="w-6 h-6 text-white" fill="white" />
           </div>
           <div>
-            <h1 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>MUSE</h1>
-            <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>Multi-sensory Emotional Regulation System</p>
+            <h1 style={{ 
+              fontSize: '22px', 
+              fontWeight: '700', 
+              margin: 0,
+              color: 'var(--text-dark)',
+              fontFamily: "'Dancing Script', cursive",
+              letterSpacing: '0.5px'
+            }}>
+              MUSE
+            </h1>
+            <p style={{ 
+              fontSize: '12px', 
+              color: 'var(--text-muted)', 
+              margin: 0,
+              fontWeight: '400'
+            }}>
+              Multi-sensory Emotional Regulation System
+            </p>
           </div>
         </div>
       </div>

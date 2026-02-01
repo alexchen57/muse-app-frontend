@@ -10,31 +10,82 @@ export function SettingsView() {
     setMWLBaseline,
   } = useAppStore();
 
+  const cardStyle = {
+    background: 'white',
+    borderRadius: '16px',
+    padding: '24px',
+    border: '1px solid var(--beige)',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '12px 16px',
+    background: 'var(--beige-light)',
+    border: '1px solid var(--beige)',
+    borderRadius: '12px',
+    color: 'var(--text-dark)',
+    fontSize: '15px',
+    outline: 'none',
+    transition: 'all 0.2s ease'
+  };
+
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
-      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-        <div className="flex items-center gap-4">
-          <Settings className="w-8 h-8 text-blue-500" />
+      <div style={cardStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '56px',
+            height: '56px',
+            background: 'linear-gradient(135deg, var(--coral) 0%, var(--coral-light) 100%)',
+            borderRadius: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(224, 122, 95, 0.3)'
+          }}>
+            <Settings size={28} style={{ color: 'white' }} />
+          </div>
           <div>
-            <h2 className="text-2xl font-bold text-white">Settings</h2>
-            <p className="text-sm text-slate-400">Configure system parameters and preferences</p>
+            <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-dark)' }}>
+              Settings
+            </h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Configure system parameters and preferences
+            </p>
           </div>
         </div>
       </div>
 
       {/* Baseline Settings */}
-      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <User className="w-5 h-5" />
+      <div style={cardStyle}>
+        <h3 style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontSize: '18px', 
+          fontWeight: '600', 
+          color: 'var(--text-dark)', 
+          marginBottom: '24px' 
+        }}>
+          <User size={20} style={{ color: 'var(--coral)' }} />
           Baseline Settings
         </h3>
 
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {/* Heart Rate Baseline */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
-              <Heart className="w-4 h-4 text-red-500" />
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              fontSize: '14px', 
+              fontWeight: '500', 
+              color: 'var(--text-dark)', 
+              marginBottom: '10px' 
+            }}>
+              <Heart size={16} style={{ color: 'var(--state-stressed)' }} />
               Heart Rate Baseline (bpm)
             </label>
             <input
@@ -43,17 +94,29 @@ export function SettingsView() {
               onChange={(e) => setHeartRateBaseline(Number(e.target.value))}
               min="40"
               max="120"
-              className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              style={inputStyle}
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p style={{ 
+              fontSize: '12px', 
+              color: 'var(--text-muted)', 
+              marginTop: '8px' 
+            }}>
               Normal resting heart rate range: 60-80 bpm
             </p>
           </div>
 
           {/* MWL Baseline */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
-              <Brain className="w-4 h-4 text-purple-500" />
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              fontSize: '14px', 
+              fontWeight: '500', 
+              color: 'var(--text-dark)', 
+              marginBottom: '10px' 
+            }}>
+              <Brain size={16} style={{ color: 'var(--soft-blue-dark)' }} />
               MWL Baseline (0-1)
             </label>
             <input
@@ -63,9 +126,13 @@ export function SettingsView() {
               min="0"
               max="1"
               step="0.1"
-              className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              style={inputStyle}
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p style={{ 
+              fontSize: '12px', 
+              color: 'var(--text-muted)', 
+              marginTop: '8px' 
+            }}>
               Recommended to set as your average daily work MWL level
             </p>
           </div>
@@ -73,49 +140,136 @@ export function SettingsView() {
       </div>
 
       {/* Data Management */}
-      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <Database className="w-5 h-5" />
+      <div style={cardStyle}>
+        <h3 style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontSize: '18px', 
+          fontWeight: '600', 
+          color: 'var(--text-dark)', 
+          marginBottom: '20px' 
+        }}>
+          <Database size={20} style={{ color: 'var(--coral)' }} />
           Data Management
         </h3>
 
-        <div className="space-y-3">
-          <button className="w-full px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-left transition-colors">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <button style={{
+            width: '100%',
+            padding: '14px 20px',
+            background: 'var(--beige-light)',
+            border: '1px solid var(--beige)',
+            borderRadius: '12px',
+            color: 'var(--text-dark)',
+            textAlign: 'left',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}>
             Export History Data (JSON)
           </button>
-          <button className="w-full px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-left transition-colors">
+          <button style={{
+            width: '100%',
+            padding: '14px 20px',
+            background: 'var(--beige-light)',
+            border: '1px solid var(--beige)',
+            borderRadius: '12px',
+            color: 'var(--state-stressed)',
+            textAlign: 'left',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}>
             Clear All Data
           </button>
         </div>
       </div>
 
       {/* About */}
-      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <Info className="w-5 h-5" />
+      <div style={cardStyle}>
+        <h3 style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontSize: '18px', 
+          fontWeight: '600', 
+          color: 'var(--text-dark)', 
+          marginBottom: '20px' 
+        }}>
+          <Info size={20} style={{ color: 'var(--coral)' }} />
           About
         </h3>
 
-        <div className="space-y-3 text-sm text-slate-400">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
-            <div className="font-medium text-white mb-1">MUSE - Multi-sensory Emotional Regulation System</div>
-            <div>Version: v1.0 (Prototype)</div>
+            <div style={{ 
+              fontWeight: '500', 
+              color: 'var(--text-dark)', 
+              marginBottom: '6px' 
+            }}>
+              MUSE - Multi-sensory Emotional Regulation System
+            </div>
+            <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+              Version: v1.0 (Prototype)
+            </div>
           </div>
+          
           <div>
-            <div className="font-medium text-white mb-1">Tech Stack</div>
-            <div>React 18 + TypeScript + Vite</div>
-            <div>Zustand + IndexedDB + Tone.js</div>
+            <div style={{ 
+              fontWeight: '500', 
+              color: 'var(--text-dark)', 
+              marginBottom: '6px' 
+            }}>
+              Tech Stack
+            </div>
+            <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+              React 18 + TypeScript + Vite
+            </div>
+            <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+              Zustand + IndexedDB + Tone.js
+            </div>
           </div>
+          
           <div>
-            <div className="font-medium text-white mb-1">Description</div>
-            <div>
+            <div style={{ 
+              fontWeight: '500', 
+              color: 'var(--text-dark)', 
+              marginBottom: '6px' 
+            }}>
+              Description
+            </div>
+            <div style={{ 
+              fontSize: '14px', 
+              color: 'var(--text-muted)',
+              lineHeight: '1.6'
+            }}>
               This system provides personalized music intervention by real-time monitoring of heart rate and mental workload (MWL), helping users regulate work stress in a non-intrusive, low-disturbance manner.
             </div>
           </div>
-          <div className="pt-3 border-t border-slate-700">
-            <div className="text-xs text-slate-500">
-              ⚠️ Note: MWL data uses simulated data for proof of concept
-            </div>
+          
+          <div style={{ 
+            paddingTop: '16px', 
+            borderTop: '1px solid var(--beige)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              background: 'var(--coral-light)',
+              borderRadius: '6px',
+              fontSize: '12px'
+            }}>⚠️</span>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+              Note: MWL data uses simulated data for proof of concept
+            </span>
           </div>
         </div>
       </div>

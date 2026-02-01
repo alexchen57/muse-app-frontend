@@ -33,13 +33,17 @@ export const STATE_LABELS: Record<UserStateType, string> = {
 };
 
 /**
- * State Color Mappings (Corresponds to PRD Section 5.2 Design Specifications)
+ * State Color Mappings (Warm Design System)
+ * - Stressed: Coral #E07A5F
+ * - Calm: Sage Green #81B29A
+ * - Productive: Soft Blue #A8DADC
+ * - Distracted: Orange #F4A261
  */
 export const STATE_COLORS: Record<UserStateType, string> = {
-  [UserStateType.STRESSED]: '#F44336',   // Red
-  [UserStateType.CALM]: '#4CAF50',       // Green
-  [UserStateType.PRODUCTIVE]: '#2196F3', // Blue
-  [UserStateType.DISTRACTED]: '#FFC107'  // Yellow
+  [UserStateType.STRESSED]: '#E07A5F',   // Coral
+  [UserStateType.CALM]: '#81B29A',       // Sage Green
+  [UserStateType.PRODUCTIVE]: '#A8DADC', // Soft Blue
+  [UserStateType.DISTRACTED]: '#F4A261'  // Orange
 };
 
 /**
@@ -105,6 +109,14 @@ export interface StateChangeEvent {
 }
 
 /**
+ * State History Metrics (optional snapshot of metrics at state detection)
+ */
+export interface StateHistoryMetrics {
+  heartRate: number;
+  mwlIndex: number;
+}
+
+/**
  * State History Entry
  */
 export interface StateHistoryEntry {
@@ -122,6 +134,9 @@ export interface StateHistoryEntry {
   
   /** Average confidence */
   avgConfidence: number;
+  
+  /** Metrics snapshot (optional) */
+  metrics?: StateHistoryMetrics;
 }
 
 /**

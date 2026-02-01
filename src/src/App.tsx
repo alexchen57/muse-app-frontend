@@ -1,9 +1,9 @@
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
-import { HomeView } from './components/HomeView';
-import { MusicLibraryView } from './components/MusicLibraryView';
-import { HistoryView } from './components/HistoryView';
-import { PlaceholderView } from './components/PlaceholderView';
+import { HomeView } from './views/HomeView';
+import { MusicLibraryView } from './views/MusicLibraryView';
+import { HistoryView } from './views/HistoryView';
+import { SettingsView } from './views/SettingsView';
 import { useAppStore } from './stores/useAppStore';
 
 /**
@@ -12,22 +12,20 @@ import { useAppStore } from './stores/useAppStore';
  * This component has been updated to use Zustand store for state management.
  * The HomeView now integrates with the simulation services via custom hooks.
  * 
- * Data flow:
- * - HeartRateSimulator -> useHeartRateSimulator hook -> useAppStore
- * - MWLSimulator -> useMWLSimulator hook -> useAppStore
- * - useStateClassification -> classifies state based on HR/MWL -> useAppStore
- * - useMusicRecommendation -> recommends music based on state -> useAppStore
+ * Design System: Warm, wellness-focused aesthetic
+ * - Primary: Coral #E07A5F
+ * - Accent: Soft Blue #A8DADC  
+ * - Background: Cream #FAF7F5
  */
 function App() {
-  // Use Zustand store for view management
   const { currentView, setCurrentView } = useAppStore();
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-      color: 'white',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+      background: 'var(--cream)',
+      color: 'var(--text-dark)',
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
     }}>
       <Header />
 
@@ -38,21 +36,10 @@ function App() {
 
           {/* Main View */}
           <main style={{ flex: 1, minWidth: 0 }}>
-            {currentView === 'home' && (
-              <HomeView />
-            )}
-
-            {currentView === 'music' && (
-              <MusicLibraryView />
-            )}
-
-            {currentView === 'history' && (
-              <HistoryView />
-            )}
-
-            {currentView === 'settings' && (
-              <PlaceholderView icon="⚙️" title="Settings" />
-            )}
+            {currentView === 'home' && <HomeView />}
+            {currentView === 'music' && <MusicLibraryView />}
+            {currentView === 'history' && <HistoryView />}
+            {currentView === 'settings' && <SettingsView />}
           </main>
         </div>
       </div>

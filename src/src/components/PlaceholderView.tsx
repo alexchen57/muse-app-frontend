@@ -6,15 +6,34 @@ interface PlaceholderViewProps {
 export function PlaceholderView({ icon, title }: PlaceholderViewProps) {
   return (
     <div style={{
-      background: 'rgba(30, 41, 59, 0.5)',
+      background: 'white',
       borderRadius: '16px',
-      padding: '32px',
-      border: '1px solid rgba(71, 85, 105, 0.5)',
+      padding: '48px 32px',
+      border: '1px solid var(--beige)',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
       textAlign: 'center'
     }}>
-      <div style={{ fontSize: '64px', marginBottom: '16px' }}>{icon}</div>
-      <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>{title}</h2>
-      <p style={{ color: '#94a3b8' }}>Feature under development...</p>
+      <div style={{ 
+        fontSize: '64px', 
+        marginBottom: '20px',
+        filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
+      }}>
+        {icon}
+      </div>
+      <h2 style={{ 
+        fontSize: '24px', 
+        fontWeight: '600', 
+        marginBottom: '12px',
+        color: 'var(--text-dark)'
+      }}>
+        {title}
+      </h2>
+      <p style={{ 
+        color: 'var(--text-muted)',
+        fontSize: '14px'
+      }}>
+        Feature under development...
+      </p>
     </div>
   );
 }

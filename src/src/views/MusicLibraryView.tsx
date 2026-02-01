@@ -64,19 +64,14 @@ export function MusicLibraryView() {
         }
 
         setUploadProgress(`Processing: ${file.name}`);
-
-        // Load audio file
         const audioBuffer = await bpmDetectionService.loadAudioFile(file);
 
         setUploadProgress(`Analyzing BPM: ${file.name}`);
-
-        // Detect BPM
         const bpmResult = await bpmDetectionService.detectBPMFromBuffer(audioBuffer);
         const bpm = bpmResult.success ? bpmResult.bpm : null;
 
         setUploadProgress(`Saving: ${file.name}`);
 
-        // Create metadata
         const metadata: MusicMetadata = {
           id: `${Date.now()}-${Math.random()}`,
           fileName: file.name,
@@ -90,7 +85,6 @@ export function MusicLibraryView() {
           playCount: 0,
         };
 
-        // Save to IndexedDB
         await db.music.add(metadata);
       } catch (error) {
         console.error(`Failed to process ${file.name}:`, error);
@@ -100,8 +94,6 @@ export function MusicLibraryView() {
     setUploading(false);
     setUploadProgress('');
     loadMusicLibrary();
-
-    // Reset input
     event.target.value = '';
   };
 
@@ -119,26 +111,68 @@ export function MusicLibraryView() {
     setIsPlaying(true);
   };
 
+  const cardStyle: React.CSSProperties = {
+    background: 'var(--card)',
+    borderRadius: '16px',
+    padding: '24px',
+    border: '1px solid var(--beige)',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+    transition: 'all 0.3s ease'
+  };
+
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Upload Section */}
-      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-        <h2 className="text-xl font-bold text-white mb-4">Upload Music</h2>
+      <div style={cardStyle}>
+        <h2 style={{ 
+          fontSize: '20px', 
+          fontWeight: '600', 
+          color: 'var(--text-dark)', 
+          marginBottom: '16px' 
+        }}>
+          Upload Music
+        </h2>
         
-        <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-slate-500 transition-colors">
-          <div className="flex flex-col items-center justify-center text-center p-6">
+        <label style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+          height: '180px',
+          border: '2px dashed var(--beige)',
+          borderRadius: '16px',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          background: 'var(--beige-light)'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            textAlign: 'center', 
+            padding: '24px' 
+          }}>
             {uploading ? (
               <>
-                <Loader className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-                <p className="text-sm text-slate-300">{uploadProgress}</p>
+                <Loader 
+                  size={48} 
+                  style={{ 
+                    color: '#E07A5F', 
+                    marginBottom: '16px',
+                    animation: 'spin 1s linear infinite'
+                  }} 
+                />
+                <p style={{ fontSize: '14px', color: 'var(--text-dark)' }}>{uploadProgress}</p>
               </>
             ) : (
               <>
-                <Upload className="w-12 h-12 text-slate-400 mb-4" />
-                <p className="text-sm text-slate-300 mb-2">
+                <Upload size={48} style={{ color: '#E07A5F', marginBottom: '16px' }} />
+                <p style={{ fontSize: '14px', color: 'var(--text-dark)', marginBottom: '8px' }}>
                   Click to upload or drag and drop music files
                 </p>
-                <p className="text-xs text-slate-500">
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                   Supports MP3, WAV, OGG formats
                 </p>
               </>
@@ -146,7 +180,7 @@ export function MusicLibraryView() {
           </div>
           <input
             type="file"
-            className="hidden"
+            style={{ display: 'none' }}
             accept="audio/*"
             multiple
             onChange={handleFileUpload}
@@ -156,32 +190,64 @@ export function MusicLibraryView() {
       </div>
 
       {/* Music Library */}
-      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-        <h2 className="text-xl font-bold text-white mb-4">
+      <div style={cardStyle}>
+        <h2 style={{ 
+          fontSize: '20px', 
+          fontWeight: '600', 
+          color: 'var(--text-dark)', 
+          marginBottom: '16px' 
+        }}>
           Music Library ({musicLibrary.length})
         </h2>
 
         {musicLibrary.length === 0 ? (
-          <div className="text-center text-slate-400 py-12">
-            <Music className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <div style={{ 
+            textAlign: 'center', 
+            color: 'var(--text-muted)', 
+            padding: '48px 24px' 
+          }}>
+            <Music size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
             <p>Music library is empty, please upload music files</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {musicLibrary.map((music) => (
               <div
                 key={music.id}
-                className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg hover:bg-slate-900/70 transition-colors"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  padding: '16px',
+                  background: 'var(--beige-light)',
+                  borderRadius: '12px',
+                  transition: 'all 0.2s ease'
+                }}
               >
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Music className="w-6 h-6 text-white" />
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  background: 'linear-gradient(135deg, #E07A5F 0%, #F4A261 100%)',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Music size={24} style={{ color: 'white' }} />
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-white truncate">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ 
+                    fontWeight: '500', 
+                    color: 'var(--text-dark)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
                     {music.title}
                   </div>
-                  <div className="text-sm text-slate-400">
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
                     {music.bpm ? `${music.bpm} BPM` : 'BPM not detected'}
                     {' • '}
                     {Math.round(music.duration)}s
@@ -192,22 +258,44 @@ export function MusicLibraryView() {
 
                 <button
                   onClick={() => handlePlay(music)}
-                  className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  style={{
+                    padding: '10px',
+                    background: '#E07A5F',
+                    border: 'none',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 2px 6px rgba(224, 122, 95, 0.3)'
+                  }}
                 >
-                  <Play className="w-5 h-5 text-white" />
+                  <Play size={20} style={{ color: 'white' }} />
                 </button>
 
                 <button
                   onClick={() => handleDelete(music.id)}
-                  className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                  style={{
+                    padding: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
                 >
-                  <Trash2 className="w-5 h-5 text-red-400" />
+                  <Trash2 size={20} style={{ color: '#E07A5F' }} />
                 </button>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

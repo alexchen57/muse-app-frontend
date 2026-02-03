@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { Play, Pause, Volume2, VolumeX, Volume1 } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Volume1, Music, Headphones, ArrowUp, ArrowDown, Target } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 
 /**
@@ -211,7 +211,7 @@ export function MusicPlayer() {
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           ) : (
-            <span>{hasMusic ? '🎵' : '🎧'}</span>
+            hasMusic ? <Music size={32} style={{ color: 'white' }} /> : <Headphones size={32} style={{ color: 'var(--text-muted)' }} />
           )}
           {isFading && (
             <div style={{
@@ -220,10 +220,9 @@ export function MusicPlayer() {
               background: 'rgba(255,255,255,0.3)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '14px'
+              justifyContent: 'center'
             }}>
-              {isPlaying ? '⏫' : '⏬'}
+              {isPlaying ? <ArrowUp size={18} style={{ color: 'white' }} /> : <ArrowDown size={18} style={{ color: 'white' }} />}
             </div>
           )}
         </div>
@@ -384,7 +383,9 @@ export function MusicPlayer() {
             height: '24px',
             background: 'var(--beige-light)',
             borderRadius: '6px'
-          }}>🎯</span>
+          }}>
+            <Target size={14} style={{ color: '#E07A5F' }} />
+          </span>
           <span>
             Recommended based on your current state • Genre: {currentMusic.genre}
           </span>

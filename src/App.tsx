@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, History, Music, Settings, Heart, Brain, TrendingUp, Calendar, Clock, Sun, Moon } from 'lucide-react';
+import { Home, History, Music, Settings, Heart, Brain, TrendingUp, Calendar, Clock, Sun, Moon, Activity, AlertCircle, Target, Zap } from 'lucide-react';
 import { MusicLibraryView } from './src/views/MusicLibraryView';
 import { MusicPlayer } from './src/components/MusicPlayer';
 import { db } from './src/utils/db';
@@ -51,7 +51,7 @@ class MusicErrorBoundary extends React.Component<
           border: '1px solid var(--beige)',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
         }}>
-          <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: 'var(--coral)' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#E07A5F' }}>
             Music Library failed to load
           </div>
           <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
@@ -76,7 +76,6 @@ function App() {
   const [musicLibrary, setMusicLibrary] = useState<MusicMetadata[]>([]);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Check localStorage or system preference
     const saved = localStorage.getItem('muse-theme');
     if (saved) return saved === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -101,12 +100,36 @@ function App() {
     currentMusic 
   } = useAppStore();
 
-  // State configuration - colors work in both themes
+  // State configuration with icons instead of emojis
   const stateConfig = {
-    calm: { emoji: '😌', label: 'Calm', color: '#81B29A', description: 'Stable heart rate, low MWL, good condition' },
-    anxious: { emoji: '😰', label: 'Stressed', color: '#E07A5F', description: 'Elevated heart rate and MWL, need relaxation' },
-    focused: { emoji: '🎯', label: 'Productive', color: '#A8DADC', description: 'Moderate heart rate and MWL, high efficiency' },
-    distracted: { emoji: '😵', label: 'Distracted', color: '#F4A261', description: 'High MWL but low output, need adjustment' }
+    calm: { 
+      icon: Activity, 
+      label: 'Calm', 
+      color: '#81B29A', 
+      bgColor: '#81B29A',
+      description: 'Stable heart rate, low MWL, good condition' 
+    },
+    anxious: { 
+      icon: AlertCircle, 
+      label: 'Stressed', 
+      color: '#E07A5F', 
+      bgColor: '#E07A5F',
+      description: 'Elevated heart rate and MWL, need relaxation' 
+    },
+    focused: { 
+      icon: Target, 
+      label: 'Productive', 
+      color: '#A8DADC', 
+      bgColor: '#A8DADC',
+      description: 'Moderate heart rate and MWL, high efficiency' 
+    },
+    distracted: { 
+      icon: Zap, 
+      label: 'Distracted', 
+      color: '#F4A261', 
+      bgColor: '#F4A261',
+      description: 'High MWL but low output, need adjustment' 
+    }
   };
 
   // Simulate real-time data updates
@@ -216,6 +239,7 @@ function App() {
   }, [heartRate, mwl, currentState]);
 
   const currentStateInfo = stateConfig[currentState];
+  const StateIcon = currentStateInfo.icon;
 
   // Calculate statistics
   const stats = history.length > 0 ? {
@@ -244,7 +268,7 @@ function App() {
     return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
   };
 
-  // Card style helper - uses CSS variables for theming
+  // Card style helper
   const cardStyle: React.CSSProperties = {
     background: 'var(--card)',
     borderRadius: '16px',
@@ -283,7 +307,7 @@ function App() {
               <div style={{
                 width: '44px',
                 height: '44px',
-                background: 'linear-gradient(135deg, var(--coral) 0%, var(--coral-light) 100%)',
+                background: 'linear-gradient(135deg, #E07A5F 0%, #F4A261 100%)',
                 borderRadius: '12px',
                 display: 'flex',
                 alignItems: 'center',
@@ -367,7 +391,7 @@ function App() {
                       padding: '14px 16px',
                       borderRadius: '12px',
                       border: 'none',
-                      background: currentView === id ? 'var(--coral)' : 'transparent',
+                      background: currentView === id ? '#E07A5F' : 'transparent',
                       color: currentView === id ? 'white' : 'var(--text-muted)',
                       cursor: 'pointer',
                       fontSize: '14px',
@@ -436,7 +460,7 @@ function App() {
                           display: 'inline-block',
                           boxShadow: '0 0 6px #81B29A'
                         }} />
-                        Connected • 85%
+                        Connected - 85%
                       </div>
                     </div>
                   </div>
@@ -474,7 +498,7 @@ function App() {
                           display: 'inline-block',
                           boxShadow: '0 0 6px #81B29A'
                         }} />
-                        Connected • 90%
+                        Connected - 90%
                       </div>
                     </div>
                   </div>
@@ -543,46 +567,50 @@ function App() {
                   </div>
                 </div>
 
-                {/* State Indicator */}
+                {/* State Indicator - with dynamic background color */}
                 <div style={{
-                  ...cardStyle,
-                  borderLeft: `4px solid ${currentStateInfo.color}`
+                  background: currentStateInfo.bgColor,
+                  borderRadius: '16px',
+                  padding: '24px',
+                  boxShadow: isDarkMode 
+                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+                    : `0 4px 12px ${currentStateInfo.bgColor}40`,
+                  transition: 'all 0.5s ease'
                 }}>
-                  <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: '500', marginBottom: '20px' }}>
+                  <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', fontWeight: '500', marginBottom: '20px' }}>
                     Current Work State
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '20px' }}>
                     <div style={{
                       width: '72px',
                       height: '72px',
-                      background: isDarkMode ? `${currentStateInfo.color}30` : `${currentStateInfo.color}20`,
+                      background: 'rgba(255,255,255,0.2)',
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '36px',
                       flexShrink: 0,
-                      boxShadow: `0 4px 12px ${currentStateInfo.color}30`
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                     }}>
-                      {currentStateInfo.emoji}
+                      <StateIcon style={{ width: '36px', height: '36px', color: 'white' }} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '32px', fontWeight: '600', color: currentStateInfo.color, marginBottom: '8px' }}>
+                      <div style={{ fontSize: '32px', fontWeight: '600', color: 'white', marginBottom: '8px' }}>
                         {currentStateInfo.label}
                       </div>
-                      <div style={{ fontSize: '14px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         Confidence: 
                         <div style={{ 
                           width: '60px', 
                           height: '4px', 
-                          background: 'var(--beige)', 
+                          background: 'rgba(255,255,255,0.3)', 
                           borderRadius: '2px',
                           overflow: 'hidden'
                         }}>
                           <div style={{ 
                             width: `${75 + Math.random() * 20}%`, 
                             height: '100%', 
-                            background: currentStateInfo.color,
+                            background: 'white',
                             borderRadius: '2px'
                           }} />
                         </div>
@@ -592,11 +620,12 @@ function App() {
                   </div>
                   <div style={{
                     padding: '14px 16px',
-                    background: 'var(--beige-light)',
+                    background: 'rgba(255,255,255,0.15)',
                     borderRadius: '12px',
                     fontSize: '14px',
-                    color: 'var(--text-muted)',
-                    lineHeight: 1.6
+                    color: 'rgba(255,255,255,0.9)',
+                    lineHeight: 1.6,
+                    backdropFilter: 'blur(4px)'
                   }}>
                     {currentStateInfo.description}
                   </div>
@@ -613,13 +642,14 @@ function App() {
                     justifyContent: 'space-between'
                   }}>
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px', color: 'var(--text-dark)' }}>
-                        🎯 State-Based Music Recommendation
+                      <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Target size={16} style={{ color: '#E07A5F' }} />
+                        State-Based Music Recommendation
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                         {musicLibrary.length === 0 
                           ? 'No music uploaded. Go to Music Library to upload songs.'
-                          : `${musicLibrary.length} songs available • Recommending based on "${currentStateInfo.label}" state`
+                          : `${musicLibrary.length} songs available - Recommending based on "${currentStateInfo.label}" state`
                         }
                       </div>
                     </div>
@@ -672,7 +702,7 @@ function App() {
                       alignItems: 'center',
                       gap: '10px'
                     }}>
-                      <span style={{
+                      <div style={{
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -680,9 +710,11 @@ function App() {
                         height: '28px',
                         background: 'var(--card)',
                         borderRadius: '8px'
-                      }}>💡</span>
+                      }}>
+                        <Music size={14} style={{ color: '#7FBFC1' }} />
+                      </div>
                       <span>
-                        Playing "{currentMusic.title}" ({currentMusic.bpm || '?'} BPM) — 
+                        Playing "{currentMusic.title}" ({currentMusic.bpm || '?'} BPM) - 
                         {currentState === 'calm' && ' maintaining your calm state'}
                         {currentState === 'anxious' && ' helping reduce stress with slower tempo'}
                         {currentState === 'focused' && ' supporting your productive flow'}
@@ -712,17 +744,22 @@ function App() {
                 textAlign: 'center'
               }}>
                 <div style={{ 
-                  fontSize: '72px', 
-                  marginBottom: '24px',
-                  filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
+                  width: '80px',
+                  height: '80px',
+                  background: 'var(--beige-light)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 24px'
                 }}>
-                  {'⚙️'}
+                  <Settings size={40} style={{ color: 'var(--text-muted)' }} />
                 </div>
                 <h2 style={{ fontSize: '28px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-dark)' }}>
-                  {'System Settings'}
+                  System Settings
                 </h2>
                 <p style={{ fontSize: '16px', color: 'var(--text-muted)', marginBottom: '32px' }}>
-                  {'Feature under development...'}
+                  Feature under development...
                 </p>
               </div>
             )}
@@ -740,7 +777,7 @@ function App() {
                   <div>
                     <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px', color: 'var(--text-dark)' }}>History Data Analysis</h2>
                     <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>
-                      Records: {history.length} entries • Data updates every 5 seconds
+                      Records: {history.length} entries - Data updates every 5 seconds
                     </p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -757,7 +794,18 @@ function App() {
                     padding: '64px 48px',
                     textAlign: 'center'
                   }}>
-                    <div style={{ fontSize: '64px', marginBottom: '20px' }}>📊</div>
+                    <div style={{ 
+                      width: '80px',
+                      height: '80px',
+                      background: 'var(--beige-light)',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 20px'
+                    }}>
+                      <TrendingUp size={40} style={{ color: 'var(--text-muted)' }} />
+                    </div>
                     <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-dark)' }}>Waiting for data recording...</h3>
                     <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>System records data every 5 seconds, please wait</p>
                   </div>
@@ -843,6 +891,7 @@ function App() {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                           {Object.entries(stats.stateDistribution).map(([state, count]) => {
                             const stateInfo = stateConfig[state as WorkState];
+                            const StateIconComponent = stateInfo.icon;
                             const percentage = history.length > 0 ? Math.round((count / history.length) * 100) : 0;
                             return (
                               <div key={state} style={{
@@ -852,7 +901,18 @@ function App() {
                                 border: `1px solid ${stateInfo.color}30`,
                                 transition: 'all 0.3s ease'
                               }}>
-                                <div style={{ fontSize: '32px', marginBottom: '8px' }}>{stateInfo.emoji}</div>
+                                <div style={{ 
+                                  width: '40px',
+                                  height: '40px',
+                                  background: `${stateInfo.color}20`,
+                                  borderRadius: '10px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  marginBottom: '12px'
+                                }}>
+                                  <StateIconComponent size={20} style={{ color: stateInfo.color }} />
+                                </div>
                                 <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px', color: stateInfo.color }}>
                                   {stateInfo.label}
                                 </div>
@@ -937,6 +997,7 @@ function App() {
                           <tbody>
                             {history.slice(-10).reverse().map((record, index) => {
                               const stateInfo = stateConfig[record.state];
+                              const StateIconComponent = stateInfo.icon;
                               return (
                                 <tr key={index} style={{ borderBottom: '1px solid var(--beige-light)' }}>
                                   <td style={{ padding: '12px', fontSize: '14px', color: 'var(--text-dark)' }}>
@@ -960,7 +1021,7 @@ function App() {
                                       color: stateInfo.color,
                                       fontWeight: '500'
                                     }}>
-                                      <span>{stateInfo.emoji}</span>
+                                      <StateIconComponent size={14} />
                                       <span>{stateInfo.label}</span>
                                     </div>
                                   </td>
